@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     
-    // --- 1. GESTION DES ONGLETS & CALENDRIER ---
+    // --- 1. GESTION DES ONGLETS & UI ---
     const navButtons = document.querySelectorAll('.nav-btn');
     const tabContents = document.querySelectorAll('.tab-content');
 
@@ -22,16 +22,23 @@ document.addEventListener('DOMContentLoaded', () => {
         btnMensuel.classList.add('active'); btnAnnuel.classList.remove('active');
         vueMensuelle.classList.add('active'); vueAnnuelle.classList.remove('active');
     });
-
     btnAnnuel.addEventListener('click', () => {
         btnAnnuel.classList.add('active'); btnMensuel.classList.remove('active');
         vueAnnuelle.classList.add('active'); vueMensuelle.classList.remove('active');
     });
 
-    // --- 2. LOGIQUE DES DATES (Sécurisée contre les fuseaux horaires) ---
+    const inputJours = document.getElementById('jours-dispo');
+    document.getElementById('btn-plus').addEventListener('click', () => {
+        if(inputJours.value < 10) { inputJours.value++; filtrerTimeline(); }
+    });
+    document.getElementById('btn-minus').addEventListener('click', () => {
+        if(inputJours.value > 1) { inputJours.value--; filtrerTimeline(); }
+    });
+
+    // --- 2. LOGIQUE DES DATES ---
     function parseDate(str) {
         const [y, m, d] = str.split('-');
-        return new Date(y, m - 1, d); // Heure locale minuit garanti
+        return new Date(y, m - 1, d);
     }
     function formatDate(d) {
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -40,6 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let tousLesFeries = {};
     let listeDesPonts = [];
     let listeVacances = [];
+    let anneesChargees = []; // Historique des années téléchargées
     const dateAujourdHui = new Date();
     
     let currentDisplayedYear = dateAujourdHui.getFullYear();
@@ -63,13 +71,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const currentDateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(jour).padStart(2, '0')}`;
             let classes = 'day-cell';
             
-            // Vacances (Nouveau !)
             const estEnVacances = listeVacances.some(v => currentDateString >= v.start && currentDateString <= v.end);
             if (estEnVacances) classes += ' vacances';
 
-            // Fériés & Ponts
             if (tousLesFeries[currentDateString]) classes += ' ferie';
-            if (listeDesPonts.find(p => p.dateAPoser === currentDateString)) classes += ' pont';
+            if (listeDesPonts.some(p => p.joursAPoserListe.includes(currentDateString))) classes += ' pont';
 
             html += `<div class="${classes}">${jour}</div>`;
         }
@@ -77,9 +83,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function rafraichirCalendrier() {
+        // Mise à jour de la vue mensuelle
         document.getElementById('current-month-title').innerText = `${nomsMois[currentDisplayedMonth]} ${currentDisplayedYear}`;
         document.getElementById('month-container').innerHTML = genererMoisHTML(currentDisplayedYear, currentDisplayedMonth);
         
+        // Mise à jour de la vue annuelle
+        document.getElementById('current-year-title').innerText = currentDisplayedYear;
         const yearContainer = document.getElementById('year-container');
         yearContainer.innerHTML = '';
         for (let m = 0; m < 12; m++) {
@@ -90,45 +99,54 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Navigation (Corrigée pour passer à l'année suivante)
-    document.getElementById('prev-month').addEventListener('click', () => {
-        currentDisplayedMonth--;
+    // Navigation dynamique pour recharger les données si besoin
+    async function changerDate(deltaAnnee, deltaMois = 0) {
+        currentDisplayedYear += deltaAnnee;
+        currentDisplayedMonth += deltaMois;
+
         if(currentDisplayedMonth < 0) { currentDisplayedMonth = 11; currentDisplayedYear--; }
-        rafraichirCalendrier();
-    });
-    document.getElementById('next-month').addEventListener('click', () => {
-        currentDisplayedMonth++;
         if(currentDisplayedMonth > 11) { currentDisplayedMonth = 0; currentDisplayedYear++; }
+
+        // Si l'année n'a jamais été chargée, on va la chercher sur le serveur du gouvernement
+        if (!anneesChargees.includes(currentDisplayedYear)) {
+            await chargerFeriesDynamique(currentDisplayedYear);
+        }
+        
         rafraichirCalendrier();
-    });
+    }
+
+    document.getElementById('prev-month').addEventListener('click', () => changerDate(0, -1));
+    document.getElementById('next-month').addEventListener('click', () => changerDate(0, 1));
+    
+    // Nouveaux boutons pour l'année
+    document.getElementById('prev-year').addEventListener('click', () => changerDate(-1, 0));
+    document.getElementById('next-year').addEventListener('click', () => changerDate(1, 0));
 
     // --- 4. LISTE & FILTRES ---
-    function afficherTimeline(pontsFiltres) {
+    function filtrerTimeline() {
+        const maxJours = parseInt(inputJours.value, 10);
+        const pontsFiltres = listeDesPonts.filter(p => p.nbJoursPoses <= maxJours);
         const timeline = document.getElementById('timeline');
         timeline.innerHTML = ''; 
+
         if (pontsFiltres.length === 0) {
-            timeline.innerHTML = `<p>Aucun pont trouvé pour ce nombre de jours.</p>`;
+            timeline.innerHTML = `<p class="text-muted" style="text-align:center;">Aucun pont trouvé pour ${maxJours} jour(s).<br>Augmentez le nombre de jours !</p>`;
             return;
         }
+
         pontsFiltres.forEach(pont => {
-            const dateFerie = parseDate(pont.dateFerieStr);
-            const dateAPoser = parseDate(pont.dateAPoser);
+            const dFerie = parseDate(pont.dateFerieStr);
             timeline.innerHTML += `
                 <div class="card">
                     <h3>${pont.nom}</h3>
-                    <p><strong>Férié le :</strong> ${dateFerie.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' })}</p>
-                    <p>Posez le <strong>${dateAPoser.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' })}</strong>.</p>
-                    <p class="highlight">💡 1 jour posé = 4 jours de repos !</p>
+                    <p class="text-muted">Férié le ${dFerie.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' })}</p>
+                    <p>${pont.description}</p>
+                    <span class="pont-tag">${pont.nbJoursPoses} jour(s) posé(s) = ${pont.gain} jours de repos !</span>
                 </div>`;
         });
     }
 
-    document.querySelector('.filter-bar .btn-secondary').addEventListener('click', () => {
-        const maxJours = parseInt(document.getElementById('jours-dispo').value, 10);
-        afficherTimeline(listeDesPonts.filter(p => p.joursAPoser <= maxJours));
-    });
-
-    // --- 5. CHARGEMENT DES DONNÉES ---
+    // --- 5. CHARGEMENT & ALGORYTHME ---
     async function fetchVacances(zone) {
         const url = `https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records?limit=100&where=population="Élèves"`;
         try {
@@ -137,37 +155,79 @@ document.addEventListener('DOMContentLoaded', () => {
             listeVacances = data.results
                 .filter(r => r.zones === `Zone ${zone}`)
                 .map(r => ({ start: r.start_date.split('T')[0], end: r.end_date.split('T')[0] }));
-            rafraichirCalendrier(); // Met à jour le vert sur le calendrier
+            rafraichirCalendrier();
         } catch (error) { console.error("Erreur Vacances :", error); }
     }
 
-    async function initData() {
-        const annees = [dateAujourdHui.getFullYear(), dateAujourdHui.getFullYear() + 1];
-        for (let annee of annees) {
-            try {
-                const response = await fetch(`https://calendrier.api.gouv.fr/jours-feries/metropole/${annee}.json`);
+    async function chargerFeriesDynamique(annee) {
+        try {
+            const response = await fetch(`https://calendrier.api.gouv.fr/jours-feries/metropole/${annee}.json`);
+            if (response.ok) {
                 Object.assign(tousLesFeries, await response.json());
-            } catch (error) { console.error("Erreur API :", error); }
-        }
+                anneesChargees.push(annee);
+                calculerPontsGlobaux(); // On recalcule les ponts avec les nouvelles données
+            }
+        } catch (error) { console.log("Erreur chargement année " + annee); }
+    }
 
+    function calculerPontsGlobaux() {
+        listeDesPonts = []; // On vide pour recalculer propre
+        
         for (const [dateStr, nomFerie] of Object.entries(tousLesFeries)) {
             const dateFerie = parseDate(dateStr);
             if (dateFerie < dateAujourdHui) continue;
 
-            const jourSemaine = dateFerie.getDay(); 
-            if (jourSemaine === 2 || jourSemaine === 4) { // Mardi (2) ou Jeudi (4)
+            const jSemaine = dateFerie.getDay(); 
+            
+            // 1. PONT CLASSIQUE
+            if (jSemaine === 2 || jSemaine === 4) { 
                 const dateAPoser = new Date(dateFerie);
-                dateAPoser.setDate(dateFerie.getDate() + (jourSemaine === 2 ? -1 : 1));
+                dateAPoser.setDate(dateFerie.getDate() + (jSemaine === 2 ? -1 : 1));
                 listeDesPonts.push({
-                    nom: nomFerie,
+                    nom: `Pont : ${nomFerie}`,
                     dateFerieStr: dateStr,
-                    dateAPoser: formatDate(dateAPoser),
-                    joursAPoser: 1
+                    joursAPoserListe: [formatDate(dateAPoser)],
+                    nbJoursPoses: 1, gain: 4,
+                    description: `Posez le ${jSemaine===2?'Lundi':'Vendredi'} ${dateAPoser.getDate()}`
+                });
+
+                // Option Grand Chelem
+                const gcLundi = new Date(dateFerie); gcLundi.setDate(dateFerie.getDate() - (jSemaine-1));
+                let gcJours = [];
+                for(let i=0; i<5; i++) {
+                    const d = new Date(gcLundi); d.setDate(gcLundi.getDate() + i);
+                    if(formatDate(d) !== dateStr) gcJours.push(formatDate(d)); 
+                }
+                listeDesPonts.push({
+                    nom: `Grand Chelem : ${nomFerie}`,
+                    dateFerieStr: dateStr,
+                    joursAPoserListe: gcJours,
+                    nbJoursPoses: 4, gain: 9,
+                    description: `Posez le reste de la semaine pour rafler 9 jours.`
+                });
+            }
+
+            // 2. LE VIADUC
+            if (jSemaine === 3) {
+                const j1 = new Date(dateFerie); j1.setDate(dateFerie.getDate() + 1);
+                const j2 = new Date(dateFerie); j2.setDate(dateFerie.getDate() + 2);
+                listeDesPonts.push({
+                    nom: `Viaduc : ${nomFerie}`,
+                    dateFerieStr: dateStr,
+                    joursAPoserListe: [formatDate(j1), formatDate(j2)],
+                    nbJoursPoses: 2, gain: 5,
+                    description: `Posez le Jeudi et le Vendredi qui suivent.`
                 });
             }
         }
+        filtrerTimeline();
+    }
 
-        // Init Zone
+    async function initData() {
+        // On charge l'année en cours et l'année suivante au démarrage
+        await chargerFeriesDynamique(dateAujourdHui.getFullYear());
+        await chargerFeriesDynamique(dateAujourdHui.getFullYear() + 1);
+
         const zoneSelect = document.getElementById('zone-select');
         let userZone = localStorage.getItem('userZone') || 'A';
         zoneSelect.value = userZone;
@@ -179,14 +239,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         rafraichirCalendrier();
-        afficherTimeline(listeDesPonts);
         
         if(listeDesPonts.length > 0) {
+            listeDesPonts.sort((a,b) => parseDate(a.dateFerieStr) - parseDate(b.dateFerieStr));
             const prochain = listeDesPonts[0];
             document.getElementById('next-pont').innerHTML = `
                 <h3>${prochain.nom}</h3>
-                <p>Posez le <strong>${parseDate(prochain.dateAPoser).toLocaleDateString('fr-FR')}</strong>.</p>
-                <p class="highlight">1 jour posé = 4 jours de repos</p>
+                <p>${prochain.description}</p>
+                <p style="font-weight:bold; margin-top:10px;">${prochain.nbJoursPoses} jour(s) posé(s) = ${prochain.gain} jours de repos</p>
             `;
         }
     }
