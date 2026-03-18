@@ -16,37 +16,52 @@
         
         <section id="tab-accueil" class="tab-content active">
             <h2>Prochain Objectif</h2>
-            <div class="card" id="next-pont">
+            <div class="card highlight-card" id="next-pont">
                 <h3>Calcul en cours...</h3>
             </div>
         </section>
 
         <section id="tab-calendrier" class="tab-content">
             <h2 id="calendar-main-title">Calendrier</h2>
-            <div class="calendar-toggle">
-                <button id="btn-mensuel" class="btn-toggle active">Mois</button>
-                <button id="btn-annuel" class="btn-toggle">Année</button>
+            <div class="segmented-control">
+                <button id="btn-mensuel" class="segment active">Mois</button>
+                <button id="btn-annuel" class="segment">Année</button>
             </div>
             
             <div id="vue-mensuelle" class="calendar-view active">
-                <div class="month-navigation">
-                    <button id="prev-month">◀</button>
+                <div class="calendar-navigation">
+                    <button id="prev-month">❮</button>
                     <h3 id="current-month-title">Chargement...</h3>
-                    <button id="next-month">▶</button>
+                    <button id="next-month">❯</button>
                 </div>
                 <div id="month-container"></div>
             </div>
 
             <div id="vue-annuelle" class="calendar-view">
+                <div class="calendar-navigation">
+                    <button id="prev-year">❮</button>
+                    <h3 id="current-year-title">Chargement...</h3>
+                    <button id="next-year">❯</button>
+                </div>
                 <div id="year-container" class="year-grid"></div>
+            </div>
+            
+            <div class="legend">
+                <span class="badge badge-ferie">Férié</span>
+                <span class="badge badge-pont">À poser</span>
+                <span class="badge badge-vacances">Vacances</span>
             </div>
         </section>
 
         <section id="tab-explorateur" class="tab-content">
-            <h2>Liste des Ponts</h2>
+            <h2>Générateur de Ponts</h2>
             <div class="filter-bar">
-                <p>Jours à poser : <input type="number" id="jours-dispo" value="1" min="1" max="10"></p>
-                <button class="btn-secondary">Filtrer</button>
+                <label for="jours-dispo">Jours max. à poser :</label>
+                <div class="stepper">
+                    <button id="btn-minus">-</button>
+                    <input type="number" id="jours-dispo" value="4" min="1" max="10" readonly>
+                    <button id="btn-plus">+</button>
+                </div>
             </div>
             <div id="timeline">
                 <p class="loading-text">⏳ Recherche des meilleurs ponts en cours...</p>
@@ -55,26 +70,24 @@
 
         <section id="tab-profil" class="tab-content">
             <h2>Mes Réglages</h2>
-            <div class="settings-group">
-                <label for="zone-select">Ma Zone Scolaire :</label>
-                <select id="zone-select">
-                    <option value="A">Zone A</option>
-                    <option value="B">Zone B</option>
-                    <option value="C">Zone C</option>
+            <div class="card">
+                <label for="zone-select" style="font-weight: bold; margin-bottom: 10px; display: block;">Ma Zone Scolaire</label>
+                <select id="zone-select" class="custom-select">
+                    <option value="A">Zone A (Lyon, Bordeaux...)</option>
+                    <option value="B">Zone B (Lille, Marseille...)</option>
+                    <option value="C">Zone C (Paris, Toulouse...)</option>
                 </select>
-                <p style="margin-top: 10px; font-size: 0.85em; color: #7f8c8d;">
-                    Changez de zone pour mettre à jour le calendrier (en vert).
-                </p>
+                <p class="text-muted">Met à jour les couleurs du calendrier avec les dates officielles (data.education.gouv.fr).</p>
             </div>
         </section>
 
     </main>
 
     <nav class="bottom-nav">
-        <button class="nav-btn active" data-target="tab-accueil">🏠 Accueil</button>
-        <button class="nav-btn" data-target="tab-calendrier">📅 Calendrier</button>
-        <button class="nav-btn" data-target="tab-explorateur">🔭 Liste</button>
-        <button class="nav-btn" data-target="tab-profil">⚙️ Profil</button>
+        <button class="nav-btn active" data-target="tab-accueil"><span class="icon">🏠</span><span class="label">Accueil</span></button>
+        <button class="nav-btn" data-target="tab-calendrier"><span class="icon">📅</span><span class="label">Calendrier</span></button>
+        <button class="nav-btn" data-target="tab-explorateur"><span class="icon">🚀</span><span class="label">Ponts</span></button>
+        <button class="nav-btn" data-target="tab-profil"><span class="icon">⚙️</span><span class="label">Profil</span></button>
     </nav>
 
     <script src="script.js"></script>
