@@ -99,7 +99,6 @@ h3 { font-size: 1.1rem; margin-bottom: 8px; font-weight: 600; }
     .stepper-btn { width: 48px; height: 48px; font-size: 1.4rem; }
     .stepper-value { font-size: 2.4rem; }
 }
-
 @media (max-width: 480px) {
     .tab-content { padding: 15px; }
     h2 { font-size: 1.1rem; }
