@@ -7,88 +7,107 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
     <header>
-        <h1>Mes Ponts d'Or 🌴</h1>
+        <h1>Mes Ponts d'Or 🏖️</h1>
     </header>
 
-    <main id="app-content">
-        
-        <section id="tab-accueil" class="tab-content active">
-            <h2>Prochain Objectif</h2>
-            <div class="card highlight-card" id="next-pont">
-                <h3>Calcul en cours...</h3>
-            </div>
-        </section>
+    <!-- Accueil -->
+    <div class="tab-content active" id="tab-accueil">
+        <h2>Prochain Objectif</h2>
+        <div class="card highlight-card" id="next-pont">
+            <h3>Calcul en cours...</h3>
+        </div>
+    </div>
 
-        <section id="tab-calendrier" class="tab-content">
-            <h2 id="calendar-main-title">Calendrier</h2>
-            <div class="segmented-control">
-                <button id="btn-mensuel" class="segment active">Mois</button>
-                <button id="btn-annuel" class="segment">Année</button>
-            </div>
-            
-            <div id="vue-mensuelle" class="calendar-view active">
-                <div class="calendar-navigation">
-                    <button id="prev-month">❮</button>
-                    <h3 id="current-month-title">Chargement...</h3>
-                    <button id="next-month">❯</button>
-                </div>
-                <div id="month-container"></div>
-            </div>
+    <!-- Calendrier -->
+    <div class="tab-content" id="tab-calendrier">
+        <h2>Calendrier</h2>
 
-            <div id="vue-annuelle" class="calendar-view">
-                <div class="calendar-navigation">
-                    <button id="prev-year">❮</button>
-                    <h3 id="current-year-title">Chargement...</h3>
-                    <button id="next-year">❯</button>
-                </div>
-                <div id="year-container" class="year-grid"></div>
-            </div>
-            
-            <div class="legend">
-                <span class="badge badge-ferie">Férié</span>
-                <span class="badge badge-pont">À poser</span>
-                <span class="badge badge-vacances">Vacances</span>
-            </div>
-        </section>
+        <div class="segmented-control">
+            <button class="segment active" id="btn-mensuel">Mois</button>
+            <button class="segment" id="btn-annuel">Année</button>
+        </div>
 
-        <section id="tab-explorateur" class="tab-content">
-            <h2>Générateur de Ponts</h2>
-            <div class="filter-bar">
-                <label for="jours-dispo">Jours max. à poser :</label>
-                <div class="stepper">
-                    <button id="btn-minus">-</button>
-                    <input type="number" id="jours-dispo" value="4" min="1" max="10" readonly>
-                    <button id="btn-plus">+</button>
-                </div>
+        <!-- Vue Mensuelle -->
+        <div id="vue-mensuelle" class="active">
+            <div class="calendar-navigation">
+                <button id="prev-month">❮</button>
+                <h3 id="current-month-title">Chargement...</h3>
+                <button id="next-month">❯</button>
             </div>
-            <div id="timeline">
-                <p class="loading-text">⏳ Recherche des meilleurs ponts en cours...</p>
+            <div id="month-container"></div>
+        </div>
+
+        <!-- Vue Annuelle -->
+        <div id="vue-annuelle">
+            <div class="calendar-navigation">
+                <button id="prev-year">❮</button>
+                <h3 id="current-year-title">Chargement...</h3>
+                <button id="next-year">❯</button>
             </div>
-        </section>
+            <div class="year-grid" id="year-container"></div>
+        </div>
 
-        <section id="tab-profil" class="tab-content">
-            <h2>Mes Réglages</h2>
-            <div class="card">
-                <label for="zone-select" style="font-weight: bold; margin-bottom: 10px; display: block;">Ma Zone Scolaire</label>
-                <select id="zone-select" class="custom-select">
-                    <option value="A">Zone A (Lyon, Bordeaux...)</option>
-                    <option value="B">Zone B (Lille, Marseille...)</option>
-                    <option value="C">Zone C (Paris, Toulouse...)</option>
-                </select>
-                <p class="text-muted">Met à jour les couleurs du calendrier avec les dates officielles (data.education.gouv.fr).</p>
+        <div class="legend">
+            <div class="badge badge-ferie">Férié</div>
+            <div class="badge badge-pont">À poser</div>
+            <div class="badge badge-vacances">Vacances</div>
+        </div>
+    </div>
+
+    <!-- Générateur de Ponts -->
+    <div class="tab-content" id="tab-explorateur">
+        <h2>Générateur de Ponts</h2>
+
+        <div class="filter-bar">
+            <span>Jours max. à poser :</span>
+            <div class="stepper">
+                <button id="btn-minus">−</button>
+                <input id="jours-dispo" type="number" value="1" min="1" max="16" readonly>
+                <button id="btn-plus">+</button>
             </div>
-        </section>
+        </div>
 
-    </main>
+        <div id="timeline">
+            <p class="text-muted" style="text-align:center; padding: 20px;">⏳ Recherche des meilleurs ponts en cours...</p>
+        </div>
+    </div>
 
-    <nav class="bottom-nav">
-        <button class="nav-btn active" data-target="tab-accueil"><span class="icon">🏠</span><span class="label">Accueil</span></button>
-        <button class="nav-btn" data-target="tab-calendrier"><span class="icon">📅</span><span class="label">Calendrier</span></button>
-        <button class="nav-btn" data-target="tab-explorateur"><span class="icon">🚀</span><span class="label">Ponts</span></button>
-        <button class="nav-btn" data-target="tab-profil"><span class="icon">⚙️</span><span class="label">Profil</span></button>
-    </nav>
+    <!-- Paramètres -->
+    <div class="tab-content" id="tab-profil">
+        <h2>Mes Réglages</h2>
+
+        <h3 style="margin-top: 20px; margin-bottom: 10px;">Ma Zone Scolaire</h3>
+        <select id="zone-select" class="custom-select">
+            <option value="A">Zone A (Lyon, Bordeaux...)</option>
+            <option value="B">Zone B (Lille, Marseille...)</option>
+            <option value="C">Zone C (Paris, Toulouse...)</option>
+        </select>
+
+        <p class="text-muted" style="margin-top: 15px;">
+            Met à jour les couleurs du calendrier avec les dates officielles (data.education.gouv.fr).
+        </p>
+    </div>
+
+    <!-- Navigation inférieure -->
+    <div class="bottom-nav">
+        <button class="nav-btn active" data-target="tab-accueil">
+            <div class="icon">🏠</div>
+            <div class="label">Accueil</div>
+        </button>
+        <button class="nav-btn" data-target="tab-calendrier">
+            <div class="icon">📅</div>
+            <div class="label">Calendrier</div>
+        </button>
+        <button class="nav-btn" data-target="tab-explorateur">
+            <div class="icon">🚀</div>
+            <div class="label">Ponts</div>
+        </button>
+        <button class="nav-btn" data-target="tab-profil">
+            <div class="icon">⚙️</div>
+            <div class="label">Profil</div>
+        </button>
+    </div>
 
     <script src="script.js"></script>
 </body>
