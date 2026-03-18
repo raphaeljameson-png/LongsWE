@@ -22,7 +22,7 @@
         </section>
 
         <section id="tab-calendrier" class="tab-content">
-            <h2>Calendrier 2026</h2>
+            <h2 id="calendar-main-title">Calendrier</h2>
             <div class="calendar-toggle">
                 <button id="btn-mensuel" class="btn-toggle active">Mois</button>
                 <button id="btn-annuel" class="btn-toggle">Année</button>
@@ -31,7 +31,7 @@
             <div id="vue-mensuelle" class="calendar-view active">
                 <div class="month-navigation">
                     <button id="prev-month">◀</button>
-                    <h3 id="current-month-title">Mai 2026</h3>
+                    <h3 id="current-month-title">Chargement...</h3>
                     <button id="next-month">▶</button>
                 </div>
                 <div id="month-container"></div>
@@ -44,6 +44,10 @@
 
         <section id="tab-explorateur" class="tab-content">
             <h2>Liste des Ponts</h2>
+            <div class="filter-bar">
+                <p>Jours à poser : <input type="number" id="jours-dispo" value="1" min="1" max="10"></p>
+                <button class="btn-secondary">Filtrer</button>
+            </div>
             <div id="timeline">
                 <p class="loading-text">⏳ Recherche des meilleurs ponts en cours...</p>
             </div>
@@ -58,6 +62,9 @@
                     <option value="B">Zone B</option>
                     <option value="C">Zone C</option>
                 </select>
+                <p style="margin-top: 10px; font-size: 0.85em; color: #7f8c8d;">
+                    Changez de zone pour mettre à jour le calendrier (en vert).
+                </p>
             </div>
         </section>
 
