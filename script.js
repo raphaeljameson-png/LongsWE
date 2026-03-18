@@ -27,12 +27,19 @@ document.addEventListener('DOMContentLoaded', () => {
         vueAnnuelle.classList.add('active'); vueMensuelle.classList.remove('active');
     });
 
+    // Stepper (Filtre Jours) - Il relance l'algorithme à chaque clic !
     const inputJours = document.getElementById('jours-dispo');
     document.getElementById('btn-plus').addEventListener('click', () => {
-        if(inputJours.value < 10) { inputJours.value++; filtrerTimeline(); }
+        if(inputJours.value < 10) { 
+            inputJours.value++; 
+            calculerPontsDynamiques(); 
+        }
     });
     document.getElementById('btn-minus').addEventListener('click', () => {
-        if(inputJours.value > 1) { inputJours.value--; filtrerTimeline(); }
+        if(inputJours.value > 1) { 
+            inputJours.value--; 
+            calculerPontsDynamiques(); 
+        }
     });
 
     // --- 2. LOGIQUE DES DATES ---
@@ -45,9 +52,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let tousLesFeries = {};
-    let listeDesPonts = [];
+    let listeDesPonts = []; // La liste qui se recréera à chaque clic
     let listeVacances = [];
-    let anneesChargees = []; // Historique des années téléchargées
+    let anneesChargees = []; 
     const dateAujourdHui = new Date();
     
     let currentDisplayedYear = dateAujourdHui.getFullYear();
@@ -75,6 +82,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (estEnVacances) classes += ' vacances';
 
             if (tousLesFeries[currentDateString]) classes += ' ferie';
+            
+            // On colore en bleu si la date fait partie des jours à poser du MEILLEUR pont trouvé
             if (listeDesPonts.some(p => p.joursAPoserListe.includes(currentDateString))) classes += ' pont';
 
             html += `<div class="${classes}">${jour}</div>`;
@@ -83,11 +92,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function rafraichirCalendrier() {
-        // Mise à jour de la vue mensuelle
         document.getElementById('current-month-title').innerText = `${nomsMois[currentDisplayedMonth]} ${currentDisplayedYear}`;
         document.getElementById('month-container').innerHTML = genererMoisHTML(currentDisplayedYear, currentDisplayedMonth);
         
-        // Mise à jour de la vue annuelle
         document.getElementById('current-year-title').innerText = currentDisplayedYear;
         const yearContainer = document.getElementById('year-container');
         yearContainer.innerHTML = '';
@@ -99,7 +106,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Navigation dynamique pour recharger les données si besoin
     async function changerDate(deltaAnnee, deltaMois = 0) {
         currentDisplayedYear += deltaAnnee;
         currentDisplayedMonth += deltaMois;
@@ -107,46 +113,146 @@ document.addEventListener('DOMContentLoaded', () => {
         if(currentDisplayedMonth < 0) { currentDisplayedMonth = 11; currentDisplayedYear--; }
         if(currentDisplayedMonth > 11) { currentDisplayedMonth = 0; currentDisplayedYear++; }
 
-        // Si l'année n'a jamais été chargée, on va la chercher sur le serveur du gouvernement
         if (!anneesChargees.includes(currentDisplayedYear)) {
             await chargerFeriesDynamique(currentDisplayedYear);
         }
-        
         rafraichirCalendrier();
     }
 
     document.getElementById('prev-month').addEventListener('click', () => changerDate(0, -1));
     document.getElementById('next-month').addEventListener('click', () => changerDate(0, 1));
-    
-    // Nouveaux boutons pour l'année
     document.getElementById('prev-year').addEventListener('click', () => changerDate(-1, 0));
     document.getElementById('next-year').addEventListener('click', () => changerDate(1, 0));
 
-    // --- 4. LISTE & FILTRES ---
-    function filtrerTimeline() {
-        const maxJours = parseInt(inputJours.value, 10);
-        const pontsFiltres = listeDesPonts.filter(p => p.nbJoursPoses <= maxJours);
+    // --- 4. L'ALGORITHME DYNAMIQUE DE RECHERCHE DE PONTS ---
+    
+    // Fonction utilitaire : est-ce qu'une date est chômée de base ? (Week-end ou Férié)
+    function estJourOff(dateObj) {
+        const day = dateObj.getDay();
+        if (day === 0 || day === 6) return true; // Dimanche (0) ou Samedi (6)
+        if (tousLesFeries[formatDate(dateObj)]) return true; // Férié
+        return false;
+    }
+
+    function calculerPontsDynamiques() {
+        const maxJoursAPoser = parseInt(inputJours.value, 10);
+        listeDesPonts = []; // On réinitialise à zéro
+        let signatures = new Set(); // Pour éviter les doublons
+
+        let dateInitiale = new Date(dateAujourdHui);
+        dateInitiale.setHours(0,0,0,0);
+        let dateFin = new Date(dateInitiale.getFullYear() + 2, 11, 31);
+
+        // On teste CHAQUE jour des 2 prochaines années comme début potentiel de vacances
+        for (let d = new Date(dateInitiale); d <= dateFin; d.setDate(d.getDate() + 1)) {
+            
+            // Règle 1: Un bloc de vacances optimisé commence toujours APRÈS un jour de travail.
+            // Si hier était déjà un week-end ou férié, on passe (le bloc aurait dû commencer avant).
+            let hier = new Date(d);
+            hier.setDate(hier.getDate() - 1);
+            if (estJourOff(hier)) continue; 
+
+            // Règle 2: On teste des blocs de vacances de 3 à 16 jours de long
+            for (let longueur = 3; longueur <= 16; longueur++) {
+                let dateFinFenetre = new Date(d);
+                dateFinFenetre.setDate(dateFinFenetre.getDate() + (longueur - 1));
+
+                // Règle 3: Un bloc optimisé se termine toujours AVANT un jour de travail.
+                let demain = new Date(dateFinFenetre);
+                demain.setDate(demain.getDate() + 1);
+                if (estJourOff(demain)) continue;
+
+                // Analysons ce qui se passe à l'intérieur de ce bloc
+                let nbJoursPoses = 0;
+                let contientFerie = false;
+                let joursAPoserListe = [];
+                let nomsFeries = new Set();
+
+                for (let cursor = new Date(d); cursor <= dateFinFenetre; cursor.setDate(cursor.getDate() + 1)) {
+                    const isFerie = !!tousLesFeries[formatDate(cursor)];
+                    if (isFerie) {
+                        contientFerie = true;
+                        nomsFeries.add(tousLesFeries[formatDate(cursor)]);
+                    }
+                    if (!estJourOff(cursor)) {
+                        nbJoursPoses++;
+                        joursAPoserListe.push(formatDate(cursor));
+                    }
+                }
+
+                // Règle Finale : On valide SI ça englobe un jour férié ET que le coût respecte le budget de l'utilisateur
+                if (contientFerie && nbJoursPoses > 0 && nbJoursPoses <= maxJoursAPoser) {
+                    const signature = d.getTime() + '-' + dateFinFenetre.getTime();
+                    if (!signatures.has(signature)) {
+                        signatures.add(signature);
+                        
+                        listeDesPonts.push({
+                            nom: Array.from(nomsFeries).join(' + '),
+                            debut: new Date(d),
+                            fin: new Date(dateFinFenetre),
+                            joursAPoserListe: joursAPoserListe,
+                            nbJoursPoses: nbJoursPoses,
+                            gain: longueur
+                        });
+                    }
+                }
+            }
+        }
+
+        // On trie par date de début
+        listeDesPonts.sort((a, b) => a.debut - b.debut);
+
+        afficherTimelineDynamique();
+        rafraichirCalendrier();
+    }
+
+    function afficherTimelineDynamique() {
         const timeline = document.getElementById('timeline');
         timeline.innerHTML = ''; 
+        const maxJours = parseInt(inputJours.value, 10);
 
-        if (pontsFiltres.length === 0) {
-            timeline.innerHTML = `<p class="text-muted" style="text-align:center;">Aucun pont trouvé pour ${maxJours} jour(s).<br>Augmentez le nombre de jours !</p>`;
+        if (listeDesPonts.length === 0) {
+            timeline.innerHTML = `<p class="text-muted" style="text-align:center; padding: 20px;">Aucune combinaison magique trouvée pour ${maxJours} jour(s).<br>Essayez d'augmenter votre budget !</p>`;
             return;
         }
 
-        pontsFiltres.forEach(pont => {
-            const dFerie = parseDate(pont.dateFerieStr);
+        // Options pour afficher les dates joliment (ex: "Jeu. 1 Mai")
+        const optDates = { weekday:'short', day:'numeric', month:'short' };
+
+        listeDesPonts.forEach(pont => {
+            const listeDatesPoser = pont.joursAPoserListe.map(d => {
+                let dateStr = parseDate(d).toLocaleDateString('fr-FR', optDates);
+                return dateStr.charAt(0).toUpperCase() + dateStr.slice(1); // Majuscule
+            }).join(', ');
+
+            const debutStr = pont.debut.toLocaleDateString('fr-FR', optDates);
+            const finStr = pont.fin.toLocaleDateString('fr-FR', optDates);
+
             timeline.innerHTML += `
                 <div class="card">
-                    <h3>${pont.nom}</h3>
-                    <p class="text-muted">Férié le ${dFerie.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' })}</p>
-                    <p>${pont.description}</p>
-                    <span class="pont-tag">${pont.nbJoursPoses} jour(s) posé(s) = ${pont.gain} jours de repos !</span>
+                    <h3>Autour de : ${pont.nom}</h3>
+                    <p class="text-muted" style="margin-bottom: 12px;">Période off : du ${debutStr} au ${finStr}</p>
+                    <p style="font-size: 0.95rem;"><strong>Dates à poser (${pont.nbJoursPoses}) :</strong><br>${listeDatesPoser}</p>
+                    <div style="margin-top: 15px;">
+                        <span class="pont-tag">🎁 ${pont.nbJoursPoses} posé(s) = ${pont.gain} jours de vacances !</span>
+                    </div>
                 </div>`;
         });
+        
+        // Mettre à jour l'accueil avec le prochain gros coup à jouer
+        if(listeDesPonts.length > 0) {
+            const prochain = listeDesPonts[0];
+            document.getElementById('next-pont').innerHTML = `
+                <h3>${prochain.nom}</h3>
+                <p>Du ${prochain.debut.toLocaleDateString('fr-FR', optDates)} au ${prochain.fin.toLocaleDateString('fr-FR', optDates)}</p>
+                <p style="font-weight:bold; margin-top:10px;">${prochain.nbJoursPoses} jour(s) posé(s) = ${prochain.gain} jours de repos</p>
+            `;
+        } else {
+            document.getElementById('next-pont').innerHTML = `<h3>Aucun pont en vue</h3>`;
+        }
     }
 
-    // --- 5. CHARGEMENT & ALGORYTHME ---
+    // --- 5. INITIALISATION DES DONNÉES ---
     async function fetchVacances(zone) {
         const url = `https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records?limit=100&where=population="Élèves"`;
         try {
@@ -165,66 +271,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response.ok) {
                 Object.assign(tousLesFeries, await response.json());
                 anneesChargees.push(annee);
-                calculerPontsGlobaux(); // On recalcule les ponts avec les nouvelles données
             }
         } catch (error) { console.log("Erreur chargement année " + annee); }
     }
 
-    function calculerPontsGlobaux() {
-        listeDesPonts = []; // On vide pour recalculer propre
-        
-        for (const [dateStr, nomFerie] of Object.entries(tousLesFeries)) {
-            const dateFerie = parseDate(dateStr);
-            if (dateFerie < dateAujourdHui) continue;
-
-            const jSemaine = dateFerie.getDay(); 
-            
-            // 1. PONT CLASSIQUE
-            if (jSemaine === 2 || jSemaine === 4) { 
-                const dateAPoser = new Date(dateFerie);
-                dateAPoser.setDate(dateFerie.getDate() + (jSemaine === 2 ? -1 : 1));
-                listeDesPonts.push({
-                    nom: `Pont : ${nomFerie}`,
-                    dateFerieStr: dateStr,
-                    joursAPoserListe: [formatDate(dateAPoser)],
-                    nbJoursPoses: 1, gain: 4,
-                    description: `Posez le ${jSemaine===2?'Lundi':'Vendredi'} ${dateAPoser.getDate()}`
-                });
-
-                // Option Grand Chelem
-                const gcLundi = new Date(dateFerie); gcLundi.setDate(dateFerie.getDate() - (jSemaine-1));
-                let gcJours = [];
-                for(let i=0; i<5; i++) {
-                    const d = new Date(gcLundi); d.setDate(gcLundi.getDate() + i);
-                    if(formatDate(d) !== dateStr) gcJours.push(formatDate(d)); 
-                }
-                listeDesPonts.push({
-                    nom: `Grand Chelem : ${nomFerie}`,
-                    dateFerieStr: dateStr,
-                    joursAPoserListe: gcJours,
-                    nbJoursPoses: 4, gain: 9,
-                    description: `Posez le reste de la semaine pour rafler 9 jours.`
-                });
-            }
-
-            // 2. LE VIADUC
-            if (jSemaine === 3) {
-                const j1 = new Date(dateFerie); j1.setDate(dateFerie.getDate() + 1);
-                const j2 = new Date(dateFerie); j2.setDate(dateFerie.getDate() + 2);
-                listeDesPonts.push({
-                    nom: `Viaduc : ${nomFerie}`,
-                    dateFerieStr: dateStr,
-                    joursAPoserListe: [formatDate(j1), formatDate(j2)],
-                    nbJoursPoses: 2, gain: 5,
-                    description: `Posez le Jeudi et le Vendredi qui suivent.`
-                });
-            }
-        }
-        filtrerTimeline();
-    }
-
     async function initData() {
-        // On charge l'année en cours et l'année suivante au démarrage
         await chargerFeriesDynamique(dateAujourdHui.getFullYear());
         await chargerFeriesDynamique(dateAujourdHui.getFullYear() + 1);
 
@@ -238,17 +289,8 @@ document.addEventListener('DOMContentLoaded', () => {
             fetchVacances(e.target.value);
         });
 
-        rafraichirCalendrier();
-        
-        if(listeDesPonts.length > 0) {
-            listeDesPonts.sort((a,b) => parseDate(a.dateFerieStr) - parseDate(b.dateFerieStr));
-            const prochain = listeDesPonts[0];
-            document.getElementById('next-pont').innerHTML = `
-                <h3>${prochain.nom}</h3>
-                <p>${prochain.description}</p>
-                <p style="font-weight:bold; margin-top:10px;">${prochain.nbJoursPoses} jour(s) posé(s) = ${prochain.gain} jours de repos</p>
-            `;
-        }
+        // Lancement du calcul dynamique !
+        calculerPontsDynamiques();
     }
 
     initData();
