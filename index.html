@@ -23,31 +23,38 @@
     <div class="tab-content" id="tab-calendrier">
         <h2>Calendrier</h2>
 
+        <!-- Onglets Mois/Année -->
         <div class="segmented-control">
             <button class="segment active" id="btn-mensuel">Mois</button>
             <button class="segment" id="btn-annuel">Année</button>
         </div>
 
-        <!-- Vue Mensuelle -->
-        <div id="vue-mensuelle" class="calendar-view active">
-            <div class="calendar-navigation">
-                <button id="prev-month">❮</button>
-                <h3 id="current-month-title">Chargement...</h3>
-                <button id="next-month">❯</button>
+        <!-- 🎯 CONTAINER POUR LES DEUX VUES -->
+        <div class="calendar-container">
+            
+            <!-- VUE MENSUELLE (affichée par défaut) -->
+            <div id="vue-mensuelle" class="calendar-view active">
+                <div class="calendar-navigation">
+                    <button id="prev-month">❮</button>
+                    <h3 id="current-month-title">Chargement...</h3>
+                    <button id="next-month">❯</button>
+                </div>
+                <div id="month-container">Chargement...</div>
             </div>
-            <div id="month-container"></div>
+
+            <!-- VUE ANNUELLE (cachée par défaut) -->
+            <div id="vue-annuelle" class="calendar-view">
+                <div class="calendar-navigation">
+                    <button id="prev-year">❮</button>
+                    <h3 id="current-year-title">Chargement...</h3>
+                    <button id="next-year">❯</button>
+                </div>
+                <div id="year-container" class="year-grid">Chargement...</div>
+            </div>
+
         </div>
 
-        <!-- Vue Annuelle -->
-        <div id="vue-annuelle" class="calendar-view">
-            <div class="calendar-navigation">
-                <button id="prev-year">❮</button>
-                <h3 id="current-year-title">Chargement...</h3>
-                <button id="next-year">❯</button>
-            </div>
-            <div class="year-grid" id="year-container"></div>
-        </div>
-
+        <!-- Légende -->
         <div class="legend">
             <div class="badge badge-ferie">Férié</div>
             <div class="badge badge-pont">À poser</div>
