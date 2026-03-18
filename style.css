@@ -320,54 +320,96 @@ h3 {
 
 .jours-label {
     font-size: 0.95rem;
-    font-weight: 500;
+    font-weight: 600;
     color: var(--text-main);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .stepper-container {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 15px;
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.6);
-    border-radius: 20px;
-    padding: 12px 20px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-    transition: all 0.3s ease;
+    gap: 20px;
+    background: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(30px) saturate(1.2);
+    -webkit-backdrop-filter: blur(30px) saturate(1.2);
+    border: 1.5px solid rgba(255, 255, 255, 0.8);
+    border-radius: 25px;
+    padding: 16px 24px;
+    box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        0 8px 32px rgba(31, 38, 135, 0.15),
+        0 2px 8px rgba(31, 38, 135, 0.08);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.stepper-container:hover {
+    background: rgba(255, 255, 255, 0.6);
+    border: 1.5px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.8),
+        0 12px 40px rgba(31, 38, 135, 0.2),
+        0 4px 12px rgba(31, 38, 135, 0.12);
+    transform: translateY(-2px);
 }
 
 .stepper-btn {
-    width: 50px;
-    height: 50px;
+    width: 52px;
+    height: 52px;
     border: none;
-    border-radius: 15px;
-    background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(0, 198, 255, 0.1));
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(0, 198, 255, 0.08));
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
     color: var(--primary);
-    font-size: 1.5rem;
-    font-weight: 600;
+    font-size: 1.6rem;
+    font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.1);
-    border: 1px solid rgba(0, 122, 255, 0.2);
+    box-shadow: 0 4px 15px rgba(0, 122, 255, 0.12);
+    border: 1.2px solid rgba(0, 122, 255, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.stepper-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(0, 122, 255, 0.15);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.stepper-btn:active::before {
+    width: 120px;
+    height: 120px;
 }
 
 .stepper-btn:hover {
-    background: linear-gradient(135deg, rgba(0, 122, 255, 0.15), rgba(0, 198, 255, 0.15));
-    transform: scale(1.05);
-    box-shadow: 0 6px 16px rgba(0, 122, 255, 0.15);
+    background: linear-gradient(135deg, rgba(0, 122, 255, 0.15), rgba(0, 198, 255, 0.12));
+    border: 1.2px solid rgba(0, 122, 255, 0.3);
+    transform: scale(1.1);
+    box-shadow: 0 8px 25px rgba(0, 122, 255, 0.2);
 }
 
 .stepper-btn:active {
-    transform: scale(0.95);
-    background: linear-gradient(135deg, rgba(0, 122, 255, 0.2), rgba(0, 198, 255, 0.2));
+    transform: scale(0.92);
+    background: linear-gradient(135deg, rgba(0, 122, 255, 0.2), rgba(0, 198, 255, 0.15));
+}
+
+.stepper-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: linear-gradient(135deg, rgba(0, 122, 255, 0.05), rgba(0, 198, 255, 0.03));
 }
 
 .stepper-display {
@@ -375,27 +417,46 @@ h3 {
     flex-direction: column;
     align-items: center;
     gap: 6px;
-    min-width: 80px;
+    min-width: 110px;
 }
 
 .stepper-value {
-    font-size: 2.5rem;
-    font-weight: 700;
+    font-size: 2.8rem;
+    font-weight: 800;
     color: var(--primary);
     line-height: 1;
+    background: transparent;
+    border: none;
+    text-align: center;
+    width: 80px;
+    padding: 0;
+    cursor: default;
+    -webkit-user-select: none;
+    user-select: none;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    transition: all 0.2s ease;
+}
+
+.stepper-value:focus {
+    outline: none;
+}
+
+.stepper-value::-webkit-outer-spin-button,
+.stepper-value::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.stepper-value[type=number] {
+    -moz-appearance: textfield;
 }
 
 .stepper-subtitle {
     font-size: 0.75rem;
     color: var(--text-muted);
-    font-weight: 500;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.stepper-container:hover {
-    background: rgba(255, 255, 255, 0.8);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+    letter-spacing: 0.8px;
 }
 
 /* ==================== BOTTOM NAV ==================== */
@@ -449,6 +510,21 @@ h3 {
     .year-grid {
         grid-template-columns: repeat(2, 1fr);
     }
+
+    .stepper-container {
+        gap: 15px;
+        padding: 14px 18px;
+    }
+
+    .stepper-btn {
+        width: 48px;
+        height: 48px;
+        font-size: 1.4rem;
+    }
+
+    .stepper-value {
+        font-size: 2.4rem;
+    }
 }
 
 @media (max-width: 480px) {
@@ -468,14 +544,20 @@ h3 {
         gap: 10px;
     }
 
+    .jours-label {
+        font-size: 0.85rem;
+    }
+
     .stepper-container {
-        padding: 10px 15px;
+        gap: 12px;
+        padding: 12px 16px;
     }
 
     .stepper-btn {
-        width: 45px;
-        height: 45px;
-        font-size: 1.3rem;
+        width: 44px;
+        height: 44px;
+        font-size: 1.2rem;
+        border-radius: 14px;
     }
 
     .stepper-value {
