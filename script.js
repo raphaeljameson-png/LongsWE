@@ -1,446 +1,569 @@
-document.addEventListener('DOMContentLoaded', () => {
-    
-    // ==================== 1. GESTION DES ONGLETS PRINCIPAUX ====================
-    const navButtons = document.querySelectorAll('.nav-btn');
-    const tabContents = document.querySelectorAll('.tab-content');
+:root {
+    --bg-color: #F2F2F7;
+    --card-bg: #FFFFFF;
+    --text-main: #1C1C1E;
+    --text-muted: #8E8E93;
+    --primary: #007AFF;
+    --primary-light: #E5F1FF;
+    --ferie-bg: #FFE5E5;
+    --ferie-text: #FF3B30;
+    --pont-bg: #E5F1FF;
+    --pont-text: #007AFF;
+    --vacances-bg: #E5FCEF;
+    --vacances-border: #34C759;
+}
 
-    navButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            navButtons.forEach(btn => btn.classList.remove('active'));
-            tabContents.forEach(tab => tab.classList.remove('active'));
-            button.classList.add('active');
-            document.getElementById(button.getAttribute('data-target')).classList.add('active');
-        });
-    });
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
 
-    // ==================== 2. GESTION DES VUES CALENDRIER (Mois/Année) ====================
-    const btnMensuel = document.getElementById('btn-mensuel');
-    const btnAnnuel = document.getElementById('btn-annuel');
-    const vueMensuelle = document.getElementById('vue-mensuelle');
-    const vueAnnuelle = document.getElementById('vue-annuelle');
+body {
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    padding-bottom: 90px;
+}
 
-    function afficherVueMensuelle() {
-        console.log('🗓️ Affichage vue Mensuelle');
-        btnMensuel.classList.add('active');
-        btnAnnuel.classList.remove('active');
-        vueMensuelle.classList.add('active');
-        vueAnnuelle.classList.remove('active');
+header {
+    background-color: var(--card-bg);
+    padding: 20px;
+    text-align: center;
+    border-bottom: 1px solid #E5E5EA;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.tab-content {
+    display: none;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+    animation: fadeIn 0.3s ease;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+h2 {
+    font-size: 1.3rem;
+    margin-bottom: 15px;
+    color: var(--text-main);
+    font-weight: 600;
+}
+
+h3 {
+    font-size: 1.1rem;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.text-muted {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin-top: 8px;
+    line-height: 1.4;
+}
+
+.card {
+    background: var(--card-bg);
+    padding: 20px;
+    border-radius: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+    margin-bottom: 15px;
+    border: 1px solid #F2F2F7;
+}
+
+.highlight-card {
+    background: linear-gradient(135deg, #007AFF, #00C6FF);
+    color: white;
+    border: none;
+}
+
+.highlight-card h3,
+.highlight-card p {
+    color: white;
+}
+
+.card h3 {
+    font-size: 1.1rem;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.card p {
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+}
+
+.segmented-control {
+    display: flex;
+    background: #E5E5EA;
+    border-radius: 10px;
+    padding: 3px;
+    margin-bottom: 20px;
+}
+
+.segment {
+    flex: 1;
+    text-align: center;
+    padding: 8px 0;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--text-main);
+    font-weight: 500;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.segment.active {
+    background: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* ==================== CALENDAR VIEW TOGGLE ==================== */
+.calendar-view {
+    display: none;
+}
+
+.calendar-view.active {
+    display: block;
+    animation: fadeIn 0.3s ease;
+}
+
+/* ==================== CALENDAR NAVIGATION ==================== */
+.calendar-navigation {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.calendar-navigation button {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: var(--primary);
+    cursor: pointer;
+    padding: 10px;
+    transition: 0.2s;
+}
+
+.calendar-navigation button:hover {
+    transform: scale(1.1);
+}
+
+/* ==================== CALENDAR GRID ==================== */
+.month-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    text-align: center;
+}
+
+.day-header {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    padding-bottom: 5px;
+    text-transform: uppercase;
+}
+
+.day-cell {
+    background: var(--card-bg);
+    height: 45px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    font-weight: 500;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    transition: 0.2s;
+}
+
+.day-cell:hover {
+    transform: scale(1.05);
+}
+
+.day-cell.empty {
+    background: transparent;
+    box-shadow: none;
+}
+
+.day-cell.vacances {
+    border-bottom: 4px solid var(--vacances-border);
+    background: var(--vacances-bg);
+}
+
+.day-cell.ferie {
+    background: var(--ferie-bg);
+    color: var(--ferie-text);
+    font-weight: bold;
+}
+
+.day-cell.pont {
+    background: var(--pont-bg);
+    color: var(--pont-text);
+    font-weight: bold;
+}
+
+/* ==================== YEAR VIEW ==================== */
+.year-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.mini-month {
+    background: var(--card-bg);
+    padding: 10px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.mini-month h4 {
+    font-size: 0.9rem;
+    text-align: center;
+    margin-bottom: 8px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.mini-month .month-grid {
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+}
+
+.mini-month .day-cell {
+    height: 30px;
+    font-size: 0.75rem;
+}
+
+/* ==================== LEGEND ==================== */
+.legend {
+    display: flex;
+    gap: 15px;
+    margin-top: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.badge {
+    display: flex;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.badge-ferie {
+    background: var(--ferie-bg);
+    color: var(--ferie-text);
+}
+
+.badge-pont {
+    background: var(--pont-bg);
+    color: var(--pont-text);
+}
+
+.badge-vacances {
+    background: var(--vacances-bg);
+    color: var(--vacances-border);
+}
+
+.pont-tag {
+    display: inline-block;
+    background: linear-gradient(135deg, #007AFF, #00C6FF);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+/* ==================== STEPPER LIQUID GLASS (iOS Style AMÉLIORÉ) ==================== */
+
+.jours-dispo-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.jours-label {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-main);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stepper-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    background: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(30px) saturate(1.2);
+    -webkit-backdrop-filter: blur(30px) saturate(1.2);
+    border: 1.5px solid rgba(255, 255, 255, 0.8);
+    border-radius: 25px;
+    padding: 16px 24px;
+    box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        0 8px 32px rgba(31, 38, 135, 0.15),
+        0 2px 8px rgba(31, 38, 135, 0.08);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.stepper-container:hover {
+    background: rgba(255, 255, 255, 0.6);
+    border: 1.5px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.8),
+        0 12px 40px rgba(31, 38, 135, 0.2),
+        0 4px 12px rgba(31, 38, 135, 0.12);
+    transform: translateY(-2px);
+}
+
+.stepper-btn {
+    width: 52px;
+    height: 52px;
+    border: none;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(0, 198, 255, 0.08));
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    color: var(--primary);
+    font-size: 1.6rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(0, 122, 255, 0.12);
+    border: 1.2px solid rgba(0, 122, 255, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.stepper-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(0, 122, 255, 0.15);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.stepper-btn:active::before {
+    width: 120px;
+    height: 120px;
+}
+
+.stepper-btn:hover {
+    background: linear-gradient(135deg, rgba(0, 122, 255, 0.15), rgba(0, 198, 255, 0.12));
+    border: 1.2px solid rgba(0, 122, 255, 0.3);
+    transform: scale(1.1);
+    box-shadow: 0 8px 25px rgba(0, 122, 255, 0.2);
+}
+
+.stepper-btn:active {
+    transform: scale(0.92);
+    background: linear-gradient(135deg, rgba(0, 122, 255, 0.2), rgba(0, 198, 255, 0.15));
+}
+
+.stepper-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: linear-gradient(135deg, rgba(0, 122, 255, 0.05), rgba(0, 198, 255, 0.03));
+}
+
+.stepper-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-width: 110px;
+}
+
+.stepper-value {
+    font-size: 2.8rem;
+    font-weight: 800;
+    color: var(--primary);
+    line-height: 1;
+    background: transparent;
+    border: none;
+    text-align: center;
+    width: 80px;
+    padding: 0;
+    cursor: default;
+    -webkit-user-select: none;
+    user-select: none;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    transition: all 0.2s ease;
+}
+
+.stepper-value:focus {
+    outline: none;
+}
+
+.stepper-value::-webkit-outer-spin-button,
+.stepper-value::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.stepper-value[type=number] {
+    -moz-appearance: textfield;
+}
+
+.stepper-subtitle {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+
+/* ==================== BOTTOM NAV ==================== */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--card-bg);
+    border-top: 1px solid #E5E5EA;
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 0;
+    z-index: 20;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.nav-btn {
+    background: none;
+    border: none;
+    padding: 8px 12px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    transition: 0.2s;
+}
+
+.nav-btn.active {
+    color: var(--primary);
+}
+
+.nav-btn .icon {
+    font-size: 1.5rem;
+}
+
+.nav-btn .label {
+    font-weight: 500;
+    font-size: 0.75rem;
+}
+
+/* ==================== RESPONSIVE ==================== */
+@media (max-width: 768px) {
+    header h1 {
+        font-size: 1.3rem;
     }
 
-    function afficherVueAnnuelle() {
-        console.log('📆 Affichage vue Annuelle');
-        btnAnnuel.classList.add('active');
-        btnMensuel.classList.remove('active');
-        vueAnnuelle.classList.add('active');
-        vueMensuelle.classList.remove('active');
+    .year-grid {
+        grid-template-columns: repeat(2, 1fr);
     }
 
-    btnMensuel.addEventListener('click', afficherVueMensuelle);
-    btnAnnuel.addEventListener('click', afficherVueAnnuelle);
-
-    // Initialiser avec la vue mensuelle
-    // afficherVueMensuelle(); // <-- Cette ligne a été commentée/supprimée
-
-    // ==================== 3. STATE MANAGEMENT ====================
-    const state = {
-        tousLesFeries: {},
-        listeDesPonts: [],
-        listeVacances: [],
-        anneesChargees: new Set(),
-        dateAujourdHui: new Date(),
-        currentDisplayedYear: null,
-        currentDisplayedMonth: null,
-        cacheCalendrier: new Map(),
-        jours2ans: null,
-        DEFAULT_JOURS: 1,
-    };
-
-    state.dateAujourdHui.setHours(0, 0, 0, 0);
-    state.currentDisplayedYear = state.dateAujourdHui.getFullYear();
-    state.currentDisplayedMonth = state.dateAujourdHui.getMonth();
-
-    // ==================== 4. UTILITAIRES DE DATES ====================
-    const parseDate = (str) => {
-        const [y, m, d] = str.split('-');
-        return new Date(y, m - 1, d);
-    };
-
-    const formatDate = (d) => {
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    };
-
-    const JOURS_SEMAINE = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
-    const NOMS_MOIS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
-                        'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-    
-    // Ancien format d'options sans année
-    const OPT_DATES = { weekday: 'short', day: 'numeric', month: 'short' };
-    
-    // NOUVELLES OPTIONS DE FORMATAGE AVEC L'ANNÉE
-    const OPT_DATES_WITH_YEAR = { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' };
-
-    // ==================== 5. CACHE OPTIMISÉ DES JOURS WORK/OFF ====================
-    
-    /**
-     * ⚡ PRÉ-GÉNÈRE UNE MAP: "YYYY-MM-DD" => estJourOff (boolean)
-     * Accès O(1) au lieu de vérifier week-end + fériés à chaque fois
-     */
-    function genererCacheJours2Ans() {
-        const cache = new Map();
-        let dateInitiale = new Date(state.dateAujourdHui);
-        let dateFin = new Date(dateInitiale.getFullYear() + 2, 11, 31);
-
-        for (let d = new Date(dateInitiale); d <= dateFin; d.setDate(d.getDate() + 1)) {
-            const key = formatDate(d);
-            const day = d.getDay();
-            
-            const isOff = (day === 0 || day === 6) || !!state.tousLesFeries[key];
-            cache.set(key, isOff);
-        }
-        return cache;
+    .stepper-container {
+        gap: 15px;
+        padding: 14px 18px;
     }
 
-    /**
-     * Lookup O(1) pour savoir si une date est jour off
-     */
-    const estJourOff = (dateObj) => {
-        const key = formatDate(dateObj);
-        return state.jours2ans?.get(key) ?? false;
-    };
-
-    // ==================== 6. STEPPER AVEC THROTTLE & INITIALISATION ====================
-    const inputJours = document.getElementById('jours-dispo');
-    let throttleTimer = null;
-
-    inputJours.value = state.DEFAULT_JOURS;
-
-    const throttledCalcul = () => {
-        if (throttleTimer) return;
-        throttleTimer = setTimeout(() => {
-            calculerPontsDynamiques();
-            throttleTimer = null;
-        }, 150);
-    };
-
-    document.getElementById('btn-plus').addEventListener('click', () => {
-        if (parseInt(inputJours.value) < 16) {
-            inputJours.value = parseInt(inputJours.value) + 1;
-            throttledCalcul();
-        }
-    });
-
-    document.getElementById('btn-minus').addEventListener('click', () => {
-        if (parseInt(inputJours.value) > 1) {
-            inputJours.value = parseInt(inputJours.value) - 1;
-            throttledCalcul();
-        }
-    });
-
-    // ==================== 7. GÉNÉRATION CALENDRIER AVEC CACHE ====================
-    
-    function genererMoisHTML(year, month) {
-        const cacheKey = `${year}-${month}`;
-        if (state.cacheCalendrier.has(cacheKey)) {
-            return state.cacheCalendrier.get(cacheKey);
-        }
-
-        let html = `<div class="month-grid">`;
-        JOURS_SEMAINE.forEach(jour => { 
-            html += `<div class="day-header">${jour}</div>`; 
-        });
-
-        const premierJour = new Date(year, month, 1).getDay();
-        const decalage = premierJour === 0 ? 6 : premierJour - 1;
-        const joursDansLeMois = new Date(year, month + 1, 0).getDate();
-
-        for (let i = 0; i < decalage; i++) { 
-            html += `<div class="day-cell empty"></div>`; 
-        }
-
-        for (let jour = 1; jour <= joursDansLeMois; jour++) {
-            const currentDateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(jour).padStart(2, '0')}`;
-            let classes = 'day-cell';
-            
-            const estEnVacances = state.listeVacances.some(
-                v => currentDateString >= v.start && currentDateString <= v.end
-            );
-            if (estEnVacances) classes += ' vacances';
-
-            if (state.tousLesFeries[currentDateString]) classes += ' ferie';
-            
-            if (state.listeDesPonts.some(p => p.joursAPoserListe.includes(currentDateString))) {
-                classes += ' pont';
-            }
-
-            html += `<div class="${classes}">${jour}</div>`;
-        }
-
-        html += `</div>`;
-        state.cacheCalendrier.set(cacheKey, html);
-        return html;
+    .stepper-btn {
+        width: 48px;
+        height: 48px;
+        font-size: 1.4rem;
     }
 
-    function rafraichirCalendrier() {
-        document.getElementById('current-month-title').innerText = 
-            `${NOMS_MOIS[state.currentDisplayedMonth]} ${state.currentDisplayedYear}`;
-        document.getElementById('month-container').innerHTML = 
-            genererMoisHTML(state.currentDisplayedYear, state.currentDisplayedMonth);
-        
-        document.getElementById('current-year-title').innerText = state.currentDisplayedYear;
-        const yearContainer = document.getElementById('year-container');
-        yearContainer.innerHTML = '';
-        
-        for (let m = 0; m < 12; m++) {
-            const div = document.createElement('div');
-            div.className = 'mini-month';
-            div.innerHTML = `<h4>${NOMS_MOIS[m]}</h4>` + genererMoisHTML(state.currentDisplayedYear, m);
-            yearContainer.appendChild(div);
-        }
+    .stepper-value {
+        font-size: 2.4rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .tab-content {
+        padding: 15px;
     }
 
-    async function changerDate(deltaAnnee, deltaMois = 0) {
-        state.currentDisplayedYear += deltaAnnee;
-        state.currentDisplayedMonth += deltaMois;
-
-        if (state.currentDisplayedMonth < 0) { 
-            state.currentDisplayedMonth = 11; 
-            state.currentDisplayedYear--; 
-        }
-        if (state.currentDisplayedMonth > 11) { 
-            state.currentDisplayedMonth = 0; 
-            state.currentDisplayedYear++; 
-        }
-
-        if (!state.anneesChargees.has(state.currentDisplayedYear)) {
-            await chargerFeriesDynamique(state.currentDisplayedYear);
-        }
-
-        for (let m = 0; m < 12; m++) {
-            state.cacheCalendrier.delete(`${state.currentDisplayedYear}-${m}`);
-        }
-        
-        rafraichirCalendrier();
+    h2 {
+        font-size: 1.1rem;
     }
 
-    document.getElementById('prev-month').addEventListener('click', () => changerDate(0, -1));
-    document.getElementById('next-month').addEventListener('click', () => changerDate(0, 1));
-    document.getElementById('prev-year').addEventListener('click', () => changerDate(-1, 0));
-    document.getElementById('next-year').addEventListener('click', () => changerDate(1, 0));
-
-    // ==================== 8. ALGORITHME OPTIMISÉ ====================
-    
-    /**
-     * ⚡ ALGORITHME INTELLIGENT DE CALCUL DE PONTS
-     */
-    function calculerPontsDynamiques() {
-        const maxJoursAPoser = parseInt(inputJours.value, 10);
-        state.listeDesPonts = [];
-        
-        state.jours2ans = genererCacheJours2Ans();
-
-        let dateInitiale = new Date(state.dateAujourdHui);
-        let dateFin = new Date(dateInitiale.getFullYear() + 2, 11, 31);
-
-        let signatures = new Set();
-
-        for (let d = new Date(dateInitiale); d <= dateFin; d.setDate(d.getDate() + 1)) {
-            
-            let hier = new Date(d);
-            hier.setDate(hier.getDate() - 1);
-            if (estJourOff(hier)) continue; 
-
-            for (let longueur = 3; longueur <= 16; longueur++) {
-                let dateFinFenetre = new Date(d);
-                dateFinFenetre.setDate(dateFinFenetre.getDate() + (longueur - 1));
-
-                let demain = new Date(dateFinFenetre);
-                demain.setDate(demain.getDate() + 1);
-                if (estJourOff(demain)) continue;
-
-                let nbJoursPoses = 0;
-                let contientFerie = false;
-                let joursAPoserListe = [];
-                let nomsFeries = new Set();
-
-                // CORRECTION APPLIQUÉE ICI: Le curseur est correctement incrémenté.
-                for (let cursor = new Date(d); cursor <= dateFinFenetre; cursor = new Date(cursor.getTime() + 86400000)) {
-                    const cursorStr = formatDate(cursor);
-                    const isFerie = !!state.tousLesFeries[cursorStr];
-                    
-                    if (isFerie) {
-                        contientFerie = true;
-                        nomsFeries.add(state.tousLesFeries[cursorStr]);
-                    }
-                    
-                    if (!state.jours2ans.get(cursorStr)) {
-                        nbJoursPoses++;
-                        joursAPoserListe.push(cursorStr);
-                    }
-                }
-
-                if (contientFerie && nbJoursPoses > 0 && nbJoursPoses <= maxJoursAPoser) {
-                    const signature = d.getTime() + '-' + dateFinFenetre.getTime();
-                    if (!signatures.has(signature)) {
-                        signatures.add(signature);
-                        
-                        state.listeDesPonts.push({
-                            nom: Array.from(nomsFeries).join(' + '),
-                            debut: new Date(d),
-                            fin: new Date(dateFinFenetre),
-                            joursAPoserListe: joursAPoserListe,
-                            nbJoursPoses: nbJoursPoses,
-                            gain: longueur
-                        });
-                    }
-                }
-            }
-        }
-
-        state.listeDesPonts.sort((a, b) => a.debut - b.debut);
-
-        afficherTimelineDynamique();
-        rafraichirCalendrier();
+    .year-grid {
+        grid-template-columns: 1fr;
     }
 
-    // ==================== 9. AFFICHAGE TIMELINE ====================
-    function afficherTimelineDynamique() {
-        const timeline = document.getElementById('timeline');
-        timeline.innerHTML = '';
-        const maxJours = parseInt(inputJours.value, 10);
-
-        if (state.listeDesPonts.length === 0) {
-            timeline.innerHTML = `
-                <p class="text-muted" style="text-align:center; padding: 20px;">
-                    Aucune combinaison magique trouvée pour ${maxJours} jour(s).<br>
-                    Essayez d'augmenter votre budget !
-                </p>`;
-            return;
-        }
-
-        state.listeDesPonts.forEach(pont => {
-            const listeDatesPoser = pont.joursAPoserListe.map(d => {
-                // MODIFICATION ICI: Utilisation de OPT_DATES_WITH_YEAR
-                let dateStr = parseDate(d).toLocaleDateString('fr-FR', OPT_DATES_WITH_YEAR);
-                return dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
-            }).join(', ');
-
-            // MODIFICATION ICI: Utilisation de OPT_DATES_WITH_YEAR
-            const debutStr = pont.debut.toLocaleDateString('fr-FR', OPT_DATES_WITH_YEAR);
-            // MODIFICATION ICI: Utilisation de OPT_DATES_WITH_YEAR
-            const finStr = pont.fin.toLocaleDateString('fr-FR', OPT_DATES_WITH_YEAR);
-            
-            // ✅ NOUVEAU: Extraction de l'année du pont
-            const annee = pont.debut.getFullYear();
-
-            timeline.innerHTML += `
-                <div class="card">
-                    <h3>Autour de : ${pont.nom} (${annee})</h3>
-                    <p class="text-muted" style="margin-bottom: 12px;">
-                        Période off : du ${debutStr} au ${finStr}
-                    </p>
-                    <p style="font-size: 0.95rem;">
-                        <strong>Dates à poser (${pont.nbJoursPoses}) :</strong><br>
-                        ${listeDatesPoser}
-                    </p>
-                    <div style="margin-top: 15px;">
-                        <span class="pont-tag">
-                            🎁 ${pont.nbJoursPoses} jour(s) posé(s) = ${pont.gain} jours de vacances !
-                        </span>
-                    </div>
-                </div>`;
-        });
-        
-        // Mise à jour de l'accueil
-        if (state.listeDesPonts.length > 0) {
-            const prochain = state.listeDesPonts[0];
-            document.getElementById('next-pont').innerHTML = `
-                <h3>${prochain.nom}</h3>
-                <p>Du ${prochain.debut.toLocaleDateString('fr-FR', OPT_DATES_WITH_YEAR)} 
-                   au ${prochain.fin.toLocaleDateString('fr-FR', OPT_DATES_WITH_YEAR)}</p>
-                <p style="font-weight:bold; margin-top:10px;">
-                    ${prochain.nbJoursPoses} jour(s) posé(s) = ${prochain.gain} jours de repos
-                </p>
-            `;
-        } else {
-            document.getElementById('next-pont').innerHTML = `<h3>Aucun pont en vue</h3>`;
-        }
+    .legend {
+        gap: 10px;
     }
 
-    // ==================== 10. FETCH AVEC GESTION D'ERREUR ====================
-    async function fetchVacances(zone) {
-        const url = `https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records?limit=100&where=population="Élèves"`;
-        try {
-            const response = await fetch(url);
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            
-            const data = await response.json();
-            if (!data.results) {
-                console.warn('Format API inattendu');
-                state.listeVacances = [];
-                return;
-            }
-
-            state.listeVacances = data.results
-                .filter(r => r.zones === `Zone ${zone}`)
-                .map(r => ({ 
-                    start: r.start_date.split('T')[0], 
-                    end: r.end_date.split('T')[0] 
-                }));
-
-            state.cacheCalendrier.clear();
-            rafraichirCalendrier();
-        } catch (error) {
-            console.error("Erreur Vacances :", error);
-            state.listeVacances = [];
-        }
+    .jours-label {
+        font-size: 0.85rem;
     }
 
-    async function chargerFeriesDynamique(annee) {
-        if (state.anneesChargees.has(annee)) return;
-
-        try {
-            const response = await fetch(`https://calendrier.api.gouv.fr/jours-feries/metropole/${annee}.json`);
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-
-            const data = await response.json();
-            Object.assign(state.tousLesFeries, data);
-            state.anneesChargees.add(annee);
-
-            state.jours2ans = null;
-            state.cacheCalendrier.clear();
-        } catch (error) {
-            console.error(`Erreur chargement fériés ${annee}:`, error);
-        }
+    .stepper-container {
+        gap: 12px;
+        padding: 12px 16px;
     }
 
-    // ==================== 11. INITIALISATION ====================
-    async function initData() {
-        try {
-            await chargerFeriesDynamique(state.dateAujourdHui.getFullYear());
-            await chargerFeriesDynamique(state.dateAujourdHui.getFullYear() + 1);
-
-            const zoneSelect = document.getElementById('zone-select');
-            let userZone = localStorage.getItem('userZone') || 'A';
-            zoneSelect.value = userZone;
-            
-            await fetchVacances(userZone);
-
-            zoneSelect.addEventListener('change', async (e) => {
-                localStorage.setItem('userZone', e.target.value);
-                await fetchVacances(e.target.value);
-            });
-
-            calculerPontsDynamiques();
-            afficherVueMensuelle(); // <-- Cette ligne a été ajoutée ici
-        } catch (error) {
-            console.error("Erreur initialisation:", error);
-        }
+    .stepper-btn {
+        width: 44px;
+        height: 44px;
+        font-size: 1.2rem;
+        border-radius: 14px;
     }
 
-    initData();
-});
+    .stepper-value {
+        font-size: 2rem;
+    }
+
+    .stepper-subtitle {
+        font-size: 0.7rem;
+    }
+}
