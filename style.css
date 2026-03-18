@@ -1,158 +1,52 @@
-document.addEventListener('DOMContentLoaded', () => {
-    
-    // --- 1. GESTION DES ONGLETS ---
-    const navButtons = document.querySelectorAll('.nav-btn');
-    const tabContents = document.querySelectorAll('.tab-content');
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+body { background-color: #f4f7f6; color: #333; padding-bottom: 70px; }
+header { background-color: #2c3e50; color: white; text-align: center; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+.tab-content { display: none; padding: 20px; max-width: 1000px; margin: 0 auto; }
+.tab-content.active { display: block; }
+h2 { margin-bottom: 15px; color: #2c3e50; text-align: center; }
 
-    navButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            navButtons.forEach(btn => btn.classList.remove('active'));
-            tabContents.forEach(tab => tab.classList.remove('active'));
-            button.classList.add('active');
-            document.getElementById(button.getAttribute('data-target')).classList.add('active');
-        });
-    });
+.card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 15px; border-left: 5px solid #3498db; }
+.card h3 { margin-bottom: 10px; color: #e74c3c; }
+.card p { margin-bottom: 8px; line-height: 1.4; }
+.highlight { background-color: #e8f4fd; padding: 5px 8px; border-radius: 5px; font-weight: bold; color: #2980b9; display: inline-block; }
+button { padding: 10px 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+.btn-primary { background-color: #3498db; color: white; width: 100%; }
 
-    // Bascule Mois/Année
-    const btnMensuel = document.getElementById('btn-mensuel');
-    const btnAnnuel = document.getElementById('btn-annuel');
-    const vueMensuelle = document.getElementById('vue-mensuelle');
-    const vueAnnuelle = document.getElementById('vue-annuelle');
+.filter-bar { display: flex; justify-content: space-between; align-items: center; background: white; padding: 10px 15px; border-radius: 12px; margin-bottom: 20px; }
+.filter-bar input { width: 50px; padding: 5px; text-align: center; }
+.btn-secondary { background-color: #ecf0f1; color: #333; margin: 0;}
 
-    btnMensuel.addEventListener('click', () => {
-        btnMensuel.classList.add('active'); btnAnnuel.classList.remove('active');
-        vueMensuelle.classList.add('active'); vueAnnuelle.classList.remove('active');
-    });
+/* --- CALENDRIER --- */
+.calendar-toggle { display: flex; gap: 10px; margin-bottom: 20px; }
+.btn-toggle { flex: 1; background: #ecf0f1; color: #7f8c8d; padding: 10px; margin: 0; }
+.btn-toggle.active { background: #2c3e50; color: white; }
+.calendar-view { display: none; }
+.calendar-view.active { display: block; }
+.month-navigation { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.month-navigation button { margin: 0; background: #ecf0f1; color: #2c3e50; padding: 8px 15px; }
 
-    btnAnnuel.addEventListener('click', () => {
-        btnAnnuel.classList.add('active'); btnMensuel.classList.remove('active');
-        vueAnnuelle.classList.add('active'); vueMensuelle.classList.remove('active');
-    });
+/* Grille CSS robuste */
+.month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+.day-header { font-weight: bold; font-size: 0.8em; color: #7f8c8d; padding: 10px 0; }
+.day-cell { background: white; padding: 10px 0; border-radius: 6px; font-size: 0.9em; display: flex; align-items: center; justify-content: center; min-height: 40px;}
+.day-cell.empty { background: transparent; }
 
-    // --- 2. VARIABLES GLOBALES & API ---
-    let tousLesFeries = {};
-    let listeDesPonts = [];
-    let currentDisplayedMonth = 4; // Mai par défaut (0 = Janvier)
-    const currentYear = 2026; 
+/* Couleurs des Jours (Modifiées pour plus de clarté) */
+.day-cell.vacances { background: #eafbf1; border-bottom: 3px solid #2ecc71; }
+.day-cell.ferie { background: #ffeaa7; color: #d35400; font-weight: bold; border-bottom: 3px solid #f1c40f; }
+.day-cell.pont { background: #74b9ff; color: white; font-weight: bold; border-bottom: 3px solid #0984e3; }
 
-    // --- 3. LE GÉNÉRATEUR DE CALENDRIER ---
-    const joursSemaine = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
-    const nomsMois = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+.year-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+.mini-month h4 { text-align: center; margin-bottom: 10px; color: #34495e; }
+.mini-month .day-cell { min-height: 30px; font-size: 0.8em; }
 
-    function genererMoisHTML(year, month, isMini = false) {
-        let html = `<div class="month-grid">`;
-        
-        // En-têtes des jours
-        joursSemaine.forEach(jour => {
-            html += `<div class="day-header">${jour}</div>`;
-        });
+@media (min-width: 768px) {
+    .year-grid { grid-template-columns: repeat(3, 1fr); }
+    .bottom-nav { max-width: 1000px; left: 50%; transform: translateX(-50%); border-radius: 20px 20px 0 0; }
+}
 
-        const premierJour = new Date(year, month, 1).getDay();
-        const decalage = premierJour === 0 ? 6 : premierJour - 1; // Ajuster pour que Lundi = 0
-        const joursDansLeMois = new Date(year, month + 1, 0).getDate();
-
-        // Cases vides avant le 1er du mois
-        for (let i = 0; i < decalage; i++) {
-            html += `<div class="day-cell empty"></div>`;
-        }
-
-        // Cases des jours
-        for (let jour = 1; jour <= joursDansLeMois; jour++) {
-            const dateActuelle = new Date(year, month, jour);
-            // Format "YYYY-MM-DD" pour comparer avec l'API
-            const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(jour).padStart(2, '0')}`;
-            
-            let classes = 'day-cell';
-            
-            // Si c'est un jour férié
-            if (tousLesFeries[dateString]) {
-                classes += ' ferie';
-            }
-            
-            // Si c'est un pont (jour à poser)
-            const estUnPont = listeDesPonts.find(p => p.dateAPoser === dateString);
-            if (estUnPont) {
-                classes += ' pont';
-            }
-
-            html += `<div class="${classes}">${jour}</div>`;
-        }
-        
-        html += `</div>`;
-        return html;
-    }
-
-    function afficherVueMensuelle() {
-        document.getElementById('current-month-title').innerText = `${nomsMois[currentDisplayedMonth]} ${currentYear}`;
-        document.getElementById('month-container').innerHTML = genererMoisHTML(currentYear, currentDisplayedMonth);
-    }
-
-    function afficherVueAnnuelle() {
-        const container = document.getElementById('year-container');
-        container.innerHTML = '';
-        for (let m = 0; m < 12; m++) {
-            const divMois = document.createElement('div');
-            divMois.className = 'mini-month';
-            divMois.innerHTML = `<h4>${nomsMois[m]}</h4>` + genererMoisHTML(currentYear, m, true);
-            container.appendChild(divMois);
-        }
-    }
-
-    // Navigation Mois Suivant/Précédent
-    document.getElementById('prev-month').addEventListener('click', () => {
-        if(currentDisplayedMonth > 0) { currentDisplayedMonth--; afficherVueMensuelle(); }
-    });
-    document.getElementById('next-month').addEventListener('click', () => {
-        if(currentDisplayedMonth < 11) { currentDisplayedMonth++; afficherVueMensuelle(); }
-    });
-
-
-    // --- 4. RÉCUPÉRATION DES DONNÉES & PONTS ---
-    async function initData() {
-        // 1. Récupérer les jours fériés de 2026
-        try {
-            const response = await fetch(`https://calendrier.api.gouv.fr/jours-feries/metropole/${currentYear}.json`);
-            tousLesFeries = await response.json();
-        } catch (error) { console.error("Erreur API :", error); }
-
-        // 2. Calculer les ponts
-        for (const [dateStr, nomFerie] of Object.entries(tousLesFeries)) {
-            const dateFerie = new Date(dateStr);
-            const jourDeLaSemaine = dateFerie.getDay(); 
-
-            if (jourDeLaSemaine === 2) { // Mardi -> on pose le lundi (jour - 1)
-                const dateAPoser = new Date(dateFerie);
-                dateAPoser.setDate(dateFerie.getDate() - 1);
-                listeDesPonts.push({
-                    nom: nomFerie,
-                    dateFerie: dateFerie,
-                    dateAPoser: dateAPoser.toISOString().split('T')[0] // Format YYYY-MM-DD
-                });
-            } else if (jourDeLaSemaine === 4) { // Jeudi -> on pose le vendredi (jour + 1)
-                const dateAPoser = new Date(dateFerie);
-                dateAPoser.setDate(dateFerie.getDate() + 1);
-                listeDesPonts.push({
-                    nom: nomFerie,
-                    dateFerie: dateFerie,
-                    dateAPoser: dateAPoser.toISOString().split('T')[0]
-                });
-            }
-        }
-
-        // 3. Mettre à jour l'affichage avec les données
-        afficherVueMensuelle();
-        afficherVueAnnuelle();
-        
-        // Mettre à jour l'accueil
-        if(listeDesPonts.length > 0) {
-            document.getElementById('next-pont').innerHTML = `
-                <h3>${listeDesPonts[0].nom}</h3>
-                <p>Posez le <strong>${new Date(listeDesPonts[0].dateAPoser).toLocaleDateString('fr-FR')}</strong> pour avoir un long week-end !</p>
-            `;
-        }
-        document.getElementById('timeline').innerHTML = `<p>Allez voir l'onglet Calendrier pour la vue détaillée !</p>`;
-    }
-
-    // Lancement
-    initData();
-});
+.bottom-nav { position: fixed; bottom: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 10px 0; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 100; }
+.nav-btn { background: none; color: #7f8c8d; font-size: 14px; flex: 1; margin: 0; padding: 10px; }
+.nav-btn.active { color: #3498db; }
+.settings-group { background: white; padding: 15px; border-radius: 12px; }
+select { padding: 10px; width: 100%; margin-top: 10px; }
