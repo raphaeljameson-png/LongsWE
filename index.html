@@ -12,9 +12,24 @@
     </header>
 
     <div class="tab-content active" id="home-tab">
-        <h2>Prochain Objectif</h2>
-        <div class="highlight-card card" id="next-pont">
-            <p class="text-muted">Calcul en cours...</p>
+        <h2>Prochains Objectifs</h2>
+        
+        <div class="jours-dispo-container">
+            <label class="jours-label">Nombre de ponts à afficher</label>
+            <div class="stepper-container">
+                <button class="stepper-btn" id="btn-obj-minus">−</button>
+                <div class="stepper-display">
+                    <input type="number" id="obj-dispo" class="stepper-value" value="5" min="1" max="20" readonly>
+                    <div class="stepper-subtitle">Objectifs</div>
+                </div>
+                <button class="stepper-btn" id="btn-obj-plus">+</button>
+            </div>
+        </div>
+
+        <div id="next-ponts-container">
+            <div class="highlight-card card">
+                <p style="color: white; text-align: center;">Calcul en cours...</p>
+            </div>
         </div>
     </div>
 
@@ -59,7 +74,7 @@
             <div class="stepper-container">
                 <button class="stepper-btn" id="btn-minus">−</button>
                 <div class="stepper-display">
-                    <input type="number" id="jours-dispo" class="stepper-value" value="1" min="1" max="16" readonly>
+                    <input type="number" id="jours-dispo" class="stepper-value" value="4" min="1" max="16" readonly>
                     <div class="stepper-subtitle">Jours</div>
                 </div>
                 <button class="stepper-btn" id="btn-plus">+</button>
