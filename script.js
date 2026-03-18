@@ -27,10 +27,10 @@ document.addEventListener('DOMContentLoaded', () => {
         vueAnnuelle.classList.add('active'); vueMensuelle.classList.remove('active');
     });
 
-    // Stepper (Filtre Jours) - Il relance l'algorithme à chaque clic !
+    // Stepper (Filtre Jours) - Relance l'algorithme instantanément
     const inputJours = document.getElementById('jours-dispo');
     document.getElementById('btn-plus').addEventListener('click', () => {
-        if(inputJours.value < 10) { 
+        if(inputJours.value < 16) { 
             inputJours.value++; 
             calculerPontsDynamiques(); 
         }
@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let tousLesFeries = {};
-    let listeDesPonts = []; // La liste qui se recréera à chaque clic
+    let listeDesPonts = [];
     let listeVacances = [];
     let anneesChargees = []; 
     const dateAujourdHui = new Date();
@@ -82,8 +82,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (estEnVacances) classes += ' vacances';
 
             if (tousLesFeries[currentDateString]) classes += ' ferie';
-            
-            // On colore en bleu si la date fait partie des jours à poser du MEILLEUR pont trouvé
             if (listeDesPonts.some(p => p.joursAPoserListe.includes(currentDateString))) classes += ' pont';
 
             html += `<div class="${classes}">${jour}</div>`;
@@ -124,86 +122,87 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('prev-year').addEventListener('click', () => changerDate(-1, 0));
     document.getElementById('next-year').addEventListener('click', () => changerDate(1, 0));
 
-    // --- 4. L'ALGORITHME DYNAMIQUE DE RECHERCHE DE PONTS ---
+    // --- 4. LE NOUVEAU MOTEUR INTELLIGENT ---
     
-    // Fonction utilitaire : est-ce qu'une date est chômée de base ? (Week-end ou Férié)
+    // Un jour est "off" si c'est le week-end OU un jour férié
     function estJourOff(dateObj) {
         const day = dateObj.getDay();
-        if (day === 0 || day === 6) return true; // Dimanche (0) ou Samedi (6)
-        if (tousLesFeries[formatDate(dateObj)]) return true; // Férié
+        if (day === 0 || day === 6) return true; 
+        if (tousLesFeries[formatDate(dateObj)]) return true; 
         return false;
     }
 
     function calculerPontsDynamiques() {
         const maxJoursAPoser = parseInt(inputJours.value, 10);
-        listeDesPonts = []; // On réinitialise à zéro
-        let signatures = new Set(); // Pour éviter les doublons
-
         let dateInitiale = new Date(dateAujourdHui);
         dateInitiale.setHours(0,0,0,0);
         let dateFin = new Date(dateInitiale.getFullYear() + 2, 11, 31);
 
-        // On teste CHAQUE jour des 2 prochaines années comme début potentiel de vacances
-        for (let d = new Date(dateInitiale); d <= dateFin; d.setDate(d.getDate() + 1)) {
-            
-            // Règle 1: Un bloc de vacances optimisé commence toujours APRÈS un jour de travail.
-            // Si hier était déjà un week-end ou férié, on passe (le bloc aurait dû commencer avant).
-            let hier = new Date(d);
-            hier.setDate(hier.getDate() - 1);
-            if (estJourOff(hier)) continue; 
+        let bestPonts = {}; // Le dictionnaire qui ne garde que la MEILLEURE option par période !
 
-            // Règle 2: On teste des blocs de vacances de 3 à 16 jours de long
-            for (let longueur = 3; longueur <= 16; longueur++) {
+        // On teste des blocs de vacances de 3 à 16 jours
+        for (let longueur = 3; longueur <= 16; longueur++) {
+            for (let d = new Date(dateInitiale); d <= dateFin; d.setDate(d.getDate() + 1)) {
+                
                 let dateFinFenetre = new Date(d);
                 dateFinFenetre.setDate(dateFinFenetre.getDate() + (longueur - 1));
 
-                // Règle 3: Un bloc optimisé se termine toujours AVANT un jour de travail.
-                let demain = new Date(dateFinFenetre);
-                demain.setDate(demain.getDate() + 1);
+                // Pour être un bloc valide, il doit commencer après un jour de travail...
+                let hier = new Date(d); hier.setDate(hier.getDate() - 1);
+                if (estJourOff(hier)) continue; 
+
+                // ... et se terminer avant un jour de travail.
+                let demain = new Date(dateFinFenetre); demain.setDate(demain.getDate() + 1);
                 if (estJourOff(demain)) continue;
 
-                // Analysons ce qui se passe à l'intérieur de ce bloc
+                // On scanne l'intérieur du bloc
                 let nbJoursPoses = 0;
                 let contientFerie = false;
                 let joursAPoserListe = [];
                 let nomsFeries = new Set();
 
                 for (let cursor = new Date(d); cursor <= dateFinFenetre; cursor.setDate(cursor.getDate() + 1)) {
-                    const isFerie = !!tousLesFeries[formatDate(cursor)];
-                    if (isFerie) {
+                    const strDate = formatDate(cursor);
+                    if (tousLesFeries[strDate]) {
                         contientFerie = true;
-                        nomsFeries.add(tousLesFeries[formatDate(cursor)]);
+                        nomsFeries.add(tousLesFeries[strDate]);
                     }
                     if (!estJourOff(cursor)) {
                         nbJoursPoses++;
-                        joursAPoserListe.push(formatDate(cursor));
+                        joursAPoserListe.push(strDate);
                     }
                 }
 
-                // Règle Finale : On valide SI ça englobe un jour férié ET que le coût respecte le budget de l'utilisateur
+                // Si le bloc contient un férié et respecte le budget de l'utilisateur
                 if (contientFerie && nbJoursPoses > 0 && nbJoursPoses <= maxJoursAPoser) {
-                    const signature = d.getTime() + '-' + dateFinFenetre.getTime();
-                    if (!signatures.has(signature)) {
-                        signatures.add(signature);
-                        
-                        listeDesPonts.push({
-                            nom: Array.from(nomsFeries).join(' + '),
-                            debut: new Date(d),
-                            fin: new Date(dateFinFenetre),
-                            joursAPoserListe: joursAPoserListe,
-                            nbJoursPoses: nbJoursPoses,
-                            gain: longueur
-                        });
+                    const nomCombinaison = Array.from(nomsFeries).join(' + ');
+                    const proposition = {
+                        nom: nomCombinaison,
+                        debut: new Date(d),
+                        fin: new Date(dateFinFenetre),
+                        joursAPoserListe: joursAPoserListe,
+                        nbJoursPoses: nbJoursPoses,
+                        gain: longueur
+                    };
+
+                    // LA MAGIE EST ICI : On écrase l'ancienne proposition si celle-ci rapporte plus de jours !
+                    if (!bestPonts[nomCombinaison] || bestPonts[nomCombinaison].gain < proposition.gain) {
+                        bestPonts[nomCombinaison] = proposition;
+                    } 
+                    // Si le gain est le même, on garde celle qui coûte le moins cher en congés
+                    else if (bestPonts[nomCombinaison].gain === proposition.gain && bestPonts[nomCombinaison].nbJoursPoses > proposition.nbJoursPoses) {
+                        bestPonts[nomCombinaison] = proposition;
                     }
                 }
             }
         }
 
-        // On trie par date de début
+        // On convertit le dictionnaire en liste et on trie chronologiquement
+        listeDesPonts = Object.values(bestPonts);
         listeDesPonts.sort((a, b) => a.debut - b.debut);
 
         afficherTimelineDynamique();
-        rafraichirCalendrier();
+        rafraichirCalendrier(); // Pour mettre à jour les pastilles bleues du calendrier !
     }
 
     function afficherTimelineDynamique() {
@@ -212,17 +211,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const maxJours = parseInt(inputJours.value, 10);
 
         if (listeDesPonts.length === 0) {
-            timeline.innerHTML = `<p class="text-muted" style="text-align:center; padding: 20px;">Aucune combinaison magique trouvée pour ${maxJours} jour(s).<br>Essayez d'augmenter votre budget !</p>`;
+            timeline.innerHTML = `<p class="text-muted" style="text-align:center; padding: 20px;">Aucune combinaison trouvée pour ${maxJours} jour(s) à poser.<br>Essayez d'augmenter votre budget avec le bouton + !</p>`;
             return;
         }
 
-        // Options pour afficher les dates joliment (ex: "Jeu. 1 Mai")
         const optDates = { weekday:'short', day:'numeric', month:'short' };
 
         listeDesPonts.forEach(pont => {
             const listeDatesPoser = pont.joursAPoserListe.map(d => {
                 let dateStr = parseDate(d).toLocaleDateString('fr-FR', optDates);
-                return dateStr.charAt(0).toUpperCase() + dateStr.slice(1); // Majuscule
+                return dateStr.charAt(0).toUpperCase() + dateStr.slice(1); 
             }).join(', ');
 
             const debutStr = pont.debut.toLocaleDateString('fr-FR', optDates);
@@ -234,12 +232,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     <p class="text-muted" style="margin-bottom: 12px;">Période off : du ${debutStr} au ${finStr}</p>
                     <p style="font-size: 0.95rem;"><strong>Dates à poser (${pont.nbJoursPoses}) :</strong><br>${listeDatesPoser}</p>
                     <div style="margin-top: 15px;">
-                        <span class="pont-tag">🎁 ${pont.nbJoursPoses} posé(s) = ${pont.gain} jours de vacances !</span>
+                        <span class="pont-tag">🎁 ${pont.nbJoursPoses} jour(s) posé(s) = ${pont.gain} jours de vacances !</span>
                     </div>
                 </div>`;
         });
         
-        // Mettre à jour l'accueil avec le prochain gros coup à jouer
         if(listeDesPonts.length > 0) {
             const prochain = listeDesPonts[0];
             document.getElementById('next-pont').innerHTML = `
@@ -247,12 +244,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p>Du ${prochain.debut.toLocaleDateString('fr-FR', optDates)} au ${prochain.fin.toLocaleDateString('fr-FR', optDates)}</p>
                 <p style="font-weight:bold; margin-top:10px;">${prochain.nbJoursPoses} jour(s) posé(s) = ${prochain.gain} jours de repos</p>
             `;
-        } else {
-            document.getElementById('next-pont').innerHTML = `<h3>Aucun pont en vue</h3>`;
         }
     }
 
-    // --- 5. INITIALISATION DES DONNÉES ---
+    // --- 5. INITIALISATION ---
     async function fetchVacances(zone) {
         const url = `https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records?limit=100&where=population="Élèves"`;
         try {
@@ -289,7 +284,6 @@ document.addEventListener('DOMContentLoaded', () => {
             fetchVacances(e.target.value);
         });
 
-        // Lancement du calcul dynamique !
         calculerPontsDynamiques();
     }
 
