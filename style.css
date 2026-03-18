@@ -142,18 +142,17 @@ h3 {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-/* ✅ FIX: Règles CSS pour afficher/masquer les vues calendrier */
+/* ==================== CALENDAR VIEW TOGGLE ==================== */
 .calendar-view {
-    display: none; /* Cache toutes les vues calendrier par défaut */
+    display: none;
 }
 
 .calendar-view.active {
-    display: block; /* Affiche la vue calendrier active */
-    animation: fadeIn 0.3s ease; /* Pour un effet sympa */
+    display: block;
+    animation: fadeIn 0.3s ease;
 }
 
-
-/* Navigation du calendrier */
+/* ==================== CALENDAR NAVIGATION ==================== */
 .calendar-navigation {
     display: flex;
     justify-content: space-between;
@@ -168,8 +167,14 @@ h3 {
     color: var(--primary);
     cursor: pointer;
     padding: 10px;
+    transition: 0.2s;
 }
 
+.calendar-navigation button:hover {
+    transform: scale(1.1);
+}
+
+/* ==================== CALENDAR GRID ==================== */
 .month-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
@@ -197,6 +202,11 @@ h3 {
     position: relative;
     overflow: hidden;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    transition: 0.2s;
+}
+
+.day-cell:hover {
+    transform: scale(1.05);
 }
 
 .day-cell.empty {
@@ -221,6 +231,7 @@ h3 {
     font-weight: bold;
 }
 
+/* ==================== YEAR VIEW ==================== */
 .year-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -254,6 +265,7 @@ h3 {
     font-size: 0.75rem;
 }
 
+/* ==================== LEGEND ==================== */
 .legend {
     display: flex;
     gap: 15px;
@@ -286,6 +298,7 @@ h3 {
     color: var(--vacances-border);
 }
 
+/* ==================== PONT TAG ==================== */
 .pont-tag {
     display: inline-block;
     background: linear-gradient(135deg, #007AFF, #00C6FF);
@@ -296,7 +309,96 @@ h3 {
     font-size: 0.9rem;
 }
 
-/* Navigation inférieure */
+/* ==================== STEPPER LIQUID GLASS (iOS Style) ==================== */
+
+.jours-dispo-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.jours-label {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text-main);
+}
+
+.stepper-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 20px;
+    padding: 12px 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+}
+
+.stepper-btn {
+    width: 50px;
+    height: 50px;
+    border: none;
+    border-radius: 15px;
+    background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(0, 198, 255, 0.1));
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: var(--primary);
+    font-size: 1.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.1);
+    border: 1px solid rgba(0, 122, 255, 0.2);
+}
+
+.stepper-btn:hover {
+    background: linear-gradient(135deg, rgba(0, 122, 255, 0.15), rgba(0, 198, 255, 0.15));
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(0, 122, 255, 0.15);
+}
+
+.stepper-btn:active {
+    transform: scale(0.95);
+    background: linear-gradient(135deg, rgba(0, 122, 255, 0.2), rgba(0, 198, 255, 0.2));
+}
+
+.stepper-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-width: 80px;
+}
+
+.stepper-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--primary);
+    line-height: 1;
+}
+
+.stepper-subtitle {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stepper-container:hover {
+    background: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+}
+
+/* ==================== BOTTOM NAV ==================== */
 .bottom-nav {
     position: fixed;
     bottom: 0;
@@ -338,15 +440,10 @@ h3 {
     font-size: 0.75rem;
 }
 
-/* Responsive */
+/* ==================== RESPONSIVE ==================== */
 @media (max-width: 768px) {
     header h1 {
         font-size: 1.3rem;
-    }
-
-    .filter-bar {
-        flex-direction: column;
-        gap: 15px;
     }
 
     .year-grid {
@@ -369,5 +466,23 @@ h3 {
 
     .legend {
         gap: 10px;
+    }
+
+    .stepper-container {
+        padding: 10px 15px;
+    }
+
+    .stepper-btn {
+        width: 45px;
+        height: 45px;
+        font-size: 1.3rem;
+    }
+
+    .stepper-value {
+        font-size: 2rem;
+    }
+
+    .stepper-subtitle {
+        font-size: 0.7rem;
     }
 }
