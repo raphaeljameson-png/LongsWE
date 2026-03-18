@@ -20,21 +20,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const vueAnnuelle = document.getElementById('vue-annuelle');
 
     function afficherVueMensuelle() {
-        btnMensuel.classList.add('active'); 
+        console.log('🗓️ Affichage vue Mensuelle');
+        btnMensuel.classList.add('active');
         btnAnnuel.classList.remove('active');
-        vueMensuelle.classList.add('active'); 
+        vueMensuelle.classList.add('active');
         vueAnnuelle.classList.remove('active');
     }
 
     function afficherVueAnnuelle() {
-        btnAnnuel.classList.add('active'); 
+        console.log('📆 Affichage vue Annuelle');
+        btnAnnuel.classList.add('active');
         btnMensuel.classList.remove('active');
-        vueAnnuelle.classList.add('active'); 
+        vueAnnuelle.classList.add('active');
         vueMensuelle.classList.remove('active');
     }
 
     btnMensuel.addEventListener('click', afficherVueMensuelle);
     btnAnnuel.addEventListener('click', afficherVueAnnuelle);
+
+    // Initialiser avec la vue mensuelle
+    afficherVueMensuelle();
 
     // ==================== 3. STATE MANAGEMENT ====================
     const state = {
@@ -46,11 +51,11 @@ document.addEventListener('DOMContentLoaded', () => {
         currentDisplayedYear: null,
         currentDisplayedMonth: null,
         cacheCalendrier: new Map(),
-        jours2ans: null, // Cache global pour les jours ouvrés/fériés sur 2 ans
+        jours2ans: null,
         DEFAULT_JOURS: 1,
     };
 
-    state.dateAujourdHui.setHours(0, 0, 0, 0); // Réinitialiser l'heure pour éviter les décalages de date
+    state.dateAujourdHui.setHours(0, 0, 0, 0);
     state.currentDisplayedYear = state.dateAujourdHui.getFullYear();
     state.currentDisplayedMonth = state.dateAujourdHui.getMonth();
 
@@ -70,26 +75,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const JOURS_SEMAINE = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
     const NOMS_MOIS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
                         'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-    // ✅ FIX: Ajout de l'année au formatage des dates pour les ponts
-    const OPT_DATES = { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' };
+    
+    // Ancien format d'options sans année
+    const OPT_DATES = { weekday: 'short', day: 'numeric', month: 'short' };
+    
+    // NOUVELLES OPTIONS DE FORMATAGE AVEC L'ANNÉE
+    const OPT_DATES_WITH_YEAR = { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' };
 
     // ==================== 5. CACHE OPTIMISÉ DES JOURS WORK/OFF ====================
     
     /**
      * ⚡ PRÉ-GÉNÈRE UNE MAP: "YYYY-MM-DD" => estJourOff (boolean)
-     * Accès O(1) au lieu de vérifier week-end + fériés à chaque fois.
-     * Génère un cache pour l'année en cours + 2 ans.
+     * Accès O(1) au lieu de vérifier week-end + fériés à chaque fois
      */
     function genererCacheJours2Ans() {
         const cache = new Map();
         let dateInitiale = new Date(state.dateAujourdHui);
-        let dateFin = new Date(dateInitiale.getFullYear() + 2, 11, 31); // Jusqu'à la fin de l'année + 2
+        let dateFin = new Date(dateInitiale.getFullYear() + 2, 11, 31);
 
         for (let d = new Date(dateInitiale); d <= dateFin; d.setDate(d.getDate() + 1)) {
             const key = formatDate(d);
-            const day = d.getDay(); // 0 pour dimanche, 6 pour samedi
+            const day = d.getDay();
             
-            // Est "off" si: week-end (0=dim, 6=sam) OU férié
             const isOff = (day === 0 || day === 6) || !!state.tousLesFeries[key];
             cache.set(key, isOff);
         }
@@ -97,11 +104,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Lookup O(1) pour savoir si une date est jour off (week-end ou férié).
+     * Lookup O(1) pour savoir si une date est jour off
      */
     const estJourOff = (dateObj) => {
         const key = formatDate(dateObj);
-        // Utilise le cache pré-généré, sinon assume que ce n'est pas un jour off (fallback)
         return state.jours2ans?.get(key) ?? false;
     };
 
@@ -109,26 +115,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputJours = document.getElementById('jours-dispo');
     let throttleTimer = null;
 
-    // 🎯 INITIALISER AVEC LA VALEUR PAR DÉFAUT
     inputJours.value = state.DEFAULT_JOURS;
 
     const throttledCalcul = () => {
-        if (throttleTimer) return; // Si un calcul est déjà en attente, ne rien faire
+        if (throttleTimer) return;
         throttleTimer = setTimeout(() => {
             calculerPontsDynamiques();
-            throttleTimer = null; // Réinitialiser le timer après l'exécution
-        }, 150); // Délai court pour éviter les recalculs à chaque clic rapide
+            throttleTimer = null;
+        }, 150);
     };
 
     document.getElementById('btn-plus').addEventListener('click', () => {
-        if (inputJours.value < 16) { // Limite supérieure fixée à 16 jours
+        if (inputJours.value < 16) {
             inputJours.value++;
             throttledCalcul();
         }
     });
 
     document.getElementById('btn-minus').addEventListener('click', () => {
-        if (inputJours.value > 1) { // Limite inférieure fixée à 1 jour
+        if (inputJours.value > 1) {
             inputJours.value--;
             throttledCalcul();
         }
@@ -143,36 +148,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         let html = `<div class="month-grid">`;
-        // En-têtes des jours de la semaine
         JOURS_SEMAINE.forEach(jour => { 
             html += `<div class="day-header">${jour}</div>`; 
         });
 
-        const premierJour = new Date(year, month, 1).getDay(); // Jour de la semaine du 1er du mois (0=dimanche, 6=samedi)
-        // Calcul du décalage pour aligner le 1er jour sur le bon jour de la semaine (lundi=0)
-        const decalage = premierJour === 0 ? 6 : premierJour - 1; 
-        const joursDansLeMois = new Date(year, month + 1, 0).getDate(); // Nombre de jours dans le mois
+        const premierJour = new Date(year, month, 1).getDay();
+        const decalage = premierJour === 0 ? 6 : premierJour - 1;
+        const joursDansLeMois = new Date(year, month + 1, 0).getDate();
 
-        // Jours vides au début du mois
         for (let i = 0; i < decalage; i++) { 
             html += `<div class="day-cell empty"></div>`; 
         }
 
-        // Jours du mois
         for (let jour = 1; jour <= joursDansLeMois; jour++) {
             const currentDateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(jour).padStart(2, '0')}`;
             let classes = 'day-cell';
             
-            // Vacances scolaires
             const estEnVacances = state.listeVacances.some(
                 v => currentDateString >= v.start && currentDateString <= v.end
             );
             if (estEnVacances) classes += ' vacances';
 
-            // Fériés
             if (state.tousLesFeries[currentDateString]) classes += ' ferie';
             
-            // Jours à poser (pont)
             if (state.listeDesPonts.some(p => p.joursAPoserListe.includes(currentDateString))) {
                 classes += ' pont';
             }
@@ -181,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         html += `</div>`;
-        state.cacheCalendrier.set(cacheKey, html); // Mettre en cache le HTML généré
+        state.cacheCalendrier.set(cacheKey, html);
         return html;
     }
 
@@ -216,12 +214,10 @@ document.addEventListener('DOMContentLoaded', () => {
             state.currentDisplayedYear++; 
         }
 
-        // Charger les fériés de l'année si ce n'est pas déjà fait
         if (!state.anneesChargees.has(state.currentDisplayedYear)) {
             await chargerFeriesDynamique(state.currentDisplayedYear);
         }
 
-        // Invalider le cache du calendrier pour cette année affichée
         for (let m = 0; m < 12; m++) {
             state.cacheCalendrier.delete(`${state.currentDisplayedYear}-${m}`);
         }
@@ -234,56 +230,41 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('prev-year').addEventListener('click', () => changerDate(-1, 0));
     document.getElementById('next-year').addEventListener('click', () => changerDate(1, 0));
 
-    // ==================== 8. ALGORITHME OPTIMISÉ DE CALCUL DES PONTS ====================
+    // ==================== 8. ALGORITHME OPTIMISÉ ====================
     
     /**
      * ⚡ ALGORITHME INTELLIGENT DE CALCUL DE PONTS
-     * 
-     * Optimisations:
-     * 1. Cache des jours work/off (O(1) lookup au lieu de O(n))
-     * 2. Break précoce si hier/demain = off
-     * 3. Pas de recalcul inutile avec throttle (150ms)
-     * 4. Valeur par défaut: 1 jour, max: 16 jours
-     * 5. Pas de mutation directe des dates dans les boucles (crée de nouvelles instances)
      */
     function calculerPontsDynamiques() {
         const maxJoursAPoser = parseInt(inputJours.value, 10);
         state.listeDesPonts = [];
         
-        // Reconstruire le cache si les données ont changé (ex: nouveaux fériés chargés)
         state.jours2ans = genererCacheJours2Ans();
 
         let dateInitiale = new Date(state.dateAujourdHui);
-        // Recherche sur 2 ans à partir d'aujourd'hui
-        let dateFin = new Date(dateInitiale.getFullYear() + 2, 11, 31); 
+        let dateFin = new Date(dateInitiale.getFullYear() + 2, 11, 31);
 
-        let signatures = new Set(); // Pour éviter les doublons de ponts
+        let signatures = new Set();
 
-        // Itérer jour par jour
         for (let d = new Date(dateInitiale); d <= dateFin; d.setDate(d.getDate() + 1)) {
             
-            // Règle 1: Le jour PRECEDENT la période doit être un jour de TRAVAIL
             let hier = new Date(d);
             hier.setDate(hier.getDate() - 1);
-            if (estJourOff(hier)) continue; // Si hier est off (WE ou férié), pas de pont possible
+            if (estJourOff(hier)) continue; 
 
-            // Règle 2: Tester des longueurs de ponts de 3 à 16 jours
             for (let longueur = 3; longueur <= 16; longueur++) {
                 let dateFinFenetre = new Date(d);
                 dateFinFenetre.setDate(dateFinFenetre.getDate() + (longueur - 1));
 
-                // Règle 3: Le jour SUIVANT la période doit être un jour de TRAVAIL
                 let demain = new Date(dateFinFenetre);
                 demain.setDate(demain.getDate() + 1);
-                if (estJourOff(demain)) continue; // Si demain est off, pas de pont possible
+                if (estJourOff(demain)) continue;
 
-                // Analyser l'intérieur du bloc de jours potentiels
                 let nbJoursPoses = 0;
                 let contientFerie = false;
                 let joursAPoserListe = [];
                 let nomsFeries = new Set();
 
-                // ⚠️ FIX: NE PAS muter le curseur directement - créer une nouvelle instance
                 for (let cursor = new Date(d); cursor <= dateFinFenetre; cursor = new Date(cursor.getTime() + 86400000)) {
                     const cursorStr = formatDate(cursor);
                     const isFerie = !!state.tousLesFeries[cursorStr];
@@ -293,35 +274,30 @@ document.addEventListener('DOMContentLoaded', () => {
                         nomsFeries.add(state.tousLesFeries[cursorStr]);
                     }
                     
-                    // Si ce n'est PAS un jour off (c'est donc un jour de travail)
-                    if (!state.jours2ans.get(cursorStr)) { 
+                    if (!state.jours2ans.get(cursorStr)) {
                         nbJoursPoses++;
                         joursAPoserListe.push(cursorStr);
                     }
                 }
 
-                // Validation: La période doit contenir au moins un férié, 
-                // avoir des jours à poser, et respecter le budget max
                 if (contientFerie && nbJoursPoses > 0 && nbJoursPoses <= maxJoursAPoser) {
-                    // Créer une signature unique pour éviter d'ajouter le même pont plusieurs fois
                     const signature = d.getTime() + '-' + dateFinFenetre.getTime();
                     if (!signatures.has(signature)) {
                         signatures.add(signature);
                         
                         state.listeDesPonts.push({
-                            nom: Array.from(nomsFeries).join(' + '), // Nom du férié (ou des fériés)
+                            nom: Array.from(nomsFeries).join(' + '),
                             debut: new Date(d),
                             fin: new Date(dateFinFenetre),
-                            joursAPoserListe: joursAPoserListe, // Liste des dates à poser
-                            nbJoursPoses: nbJoursPoses, // Nombre total de jours à poser
-                            gain: longueur // Durée totale du "congé"
+                            joursAPoserListe: joursAPoserListe,
+                            nbJoursPoses: nbJoursPoses,
+                            gain: longueur
                         });
                     }
                 }
             }
         }
 
-        // Trier les ponts par date de début
         state.listeDesPonts.sort((a, b) => a.debut - b.debut);
 
         afficherTimelineDynamique();
@@ -344,14 +320,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         state.listeDesPonts.forEach(pont => {
-            // ✅ FIX: Les dates incluent maintenant l'année
             const listeDatesPoser = pont.joursAPoserListe.map(d => {
-                let dateStr = parseDate(d).toLocaleDateString('fr-FR', OPT_DATES);
+                // MODIFICATION ICI: Utilisation de OPT_DATES_WITH_YEAR
+                let dateStr = parseDate(d).toLocaleDateString('fr-FR', OPT_DATES_WITH_YEAR);
                 return dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
             }).join(', ');
 
-            const debutStr = pont.debut.toLocaleDateString('fr-FR', OPT_DATES);
-            const finStr = pont.fin.toLocaleDateString('fr-FR', OPT_DATES);
+            // MODIFICATION ICI: Utilisation de OPT_DATES_WITH_YEAR
+            const debutStr = pont.debut.toLocaleDateString('fr-FR', OPT_DATES_WITH_YEAR);
+            // MODIFICATION ICI: Utilisation de OPT_DATES_WITH_YEAR
+            const finStr = pont.fin.toLocaleDateString('fr-FR', OPT_DATES_WITH_YEAR);
 
             timeline.innerHTML += `
                 <div class="card">
@@ -371,13 +349,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>`;
         });
         
-        // Mettre à jour l'accueil avec le prochain pont
+        // Mise à jour de l'accueil
         if (state.listeDesPonts.length > 0) {
             const prochain = state.listeDesPonts[0];
             document.getElementById('next-pont').innerHTML = `
                 <h3>${prochain.nom}</h3>
-                <p>Du ${prochain.debut.toLocaleDateString('fr-FR', OPT_DATES)} 
-                   au ${prochain.fin.toLocaleDateString('fr-FR', OPT_DATES)}</p>
+                <p>Du ${prochain.debut.toLocaleDateString('fr-FR', OPT_DATES_WITH_YEAR)} 
+                   au ${prochain.fin.toLocaleDateString('fr-FR', OPT_DATES_WITH_YEAR)}</p>
                 <p style="font-weight:bold; margin-top:10px;">
                     ${prochain.nbJoursPoses} jour(s) posé(s) = ${prochain.gain} jours de repos
                 </p>
@@ -396,7 +374,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const data = await response.json();
             if (!data.results) {
-                console.warn('Format API Vacances inattendu: "results" manquant');
+                console.warn('Format API inattendu');
                 state.listeVacances = [];
                 return;
             }
@@ -404,20 +382,20 @@ document.addEventListener('DOMContentLoaded', () => {
             state.listeVacances = data.results
                 .filter(r => r.zones === `Zone ${zone}`)
                 .map(r => ({ 
-                    start: r.start_date.split('T')[0], // Prend seulement la date (YYYY-MM-DD)
+                    start: r.start_date.split('T')[0], 
                     end: r.end_date.split('T')[0] 
                 }));
 
-            state.cacheCalendrier.clear(); // Invalider le cache du calendrier après changement de vacances
+            state.cacheCalendrier.clear();
             rafraichirCalendrier();
         } catch (error) {
-            console.error("Erreur de récupération des vacances scolaires :", error);
-            state.listeVacances = []; // S'assurer que la liste est vide en cas d'erreur
+            console.error("Erreur Vacances :", error);
+            state.listeVacances = [];
         }
     }
 
     async function chargerFeriesDynamique(annee) {
-        if (state.anneesChargees.has(annee)) return; // Si l'année est déjà chargée, ne rien faire
+        if (state.anneesChargees.has(annee)) return;
 
         try {
             const response = await fetch(`https://calendrier.api.gouv.fr/jours-feries/metropole/${annee}.json`);
@@ -426,42 +404,36 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const data = await response.json();
-            Object.assign(state.tousLesFeries, data); // Ajoute les nouveaux fériés à la liste existante
-            state.anneesChargees.add(annee); // Marque l'année comme chargée
+            Object.assign(state.tousLesFeries, data);
+            state.anneesChargees.add(annee);
 
-            // ✅ FIX: Invalider le cache des jours ouvrés/fériés pour qu'il soit reconstruit
-            state.jours2ans = null; 
-            state.cacheCalendrier.clear(); // Invalider le cache du calendrier
+            state.jours2ans = null;
+            state.cacheCalendrier.clear();
         } catch (error) {
-            console.error(`Erreur de chargement des jours fériés pour l'année ${annee}:`, error);
+            console.error(`Erreur chargement fériés ${annee}:`, error);
         }
     }
 
-    // ==================== 11. INITIALISATION DE L'APPLICATION ====================
+    // ==================== 11. INITIALISATION ====================
     async function initData() {
         try {
-            // Charger les fériés pour l'année en cours et l'année suivante
             await chargerFeriesDynamique(state.dateAujourdHui.getFullYear());
             await chargerFeriesDynamique(state.dateAujourdHui.getFullYear() + 1);
 
             const zoneSelect = document.getElementById('zone-select');
-            let userZone = localStorage.getItem('userZone') || 'A'; // Récupérer la zone utilisateur ou 'A' par défaut
+            let userZone = localStorage.getItem('userZone') || 'A';
             zoneSelect.value = userZone;
             
-            await fetchVacances(userZone); // Charger les vacances en fonction de la zone
+            await fetchVacances(userZone);
 
-            // Écouter les changements de zone
             zoneSelect.addEventListener('change', async (e) => {
                 localStorage.setItem('userZone', e.target.value);
                 await fetchVacances(e.target.value);
             });
 
-            calculerPontsDynamiques(); // Calculer les ponts une première fois
-            afficherVueMensuelle();    // ✅ FIX: Afficher la vue mensuelle par défaut au démarrage
+            calculerPontsDynamiques();
         } catch (error) {
-            console.error("Erreur lors de l'initialisation de l'application:", error);
-            // Afficher un message d'erreur à l'utilisateur si l'init échoue
-            document.getElementById('timeline').innerHTML = `<p class="text-muted" style="text-align:center; padding: 20px; color: #FF3B30;">Impossible de charger les données. Veuillez vérifier votre connexion internet.</p>`;
+            console.error("Erreur initialisation:", error);
         }
     }
 
