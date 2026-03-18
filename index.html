@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mes Ponts d'Or</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header>
+        <h1>Mes Ponts d'Or 🌴</h1>
+    </header>
+
+    <main id="app-content">
+        
+        <section id="tab-accueil" class="tab-content active">
+            <h2>Prochain Objectif</h2>
+            <div class="card" id="next-pont">
+                <h3>Le Radar est en cours d'activation...</h3>
+                <p>Calcul du prochain pont imminent.</p>
+            </div>
+        </section>
+
+        <section id="tab-explorateur" class="tab-content">
+            <h2>Vue à 2 ans</h2>
+            <div class="filter-bar">
+                <p>Jours à poser : <input type="number" id="jours-dispo" value="1" min="1" max="10"></p>
+                <button class="btn-secondary">Filtrer</button>
+            </div>
+            
+            <div id="timeline">
+                <p class="loading-text">⏳ Recherche des meilleurs ponts en cours...</p>
+            </div>
+        </section>
+
+        <section id="tab-profil" class="tab-content">
+            <h2>Mes Réglages</h2>
+            <div class="settings-group">
+                <label for="zone-select">Ma Zone Scolaire :</label>
+                <select id="zone-select">
+                    <option value="A">Zone A (Lyon, Bordeaux, Besançon...)</option>
+                    <option value="B">Zone B (Lille, Marseille, Nantes...)</option>
+                    <option value="C">Zone C (Paris, Toulouse, Montpellier...)</option>
+                </select>
+                <p style="margin-top: 15px; font-size: 0.9em; color: #7f8c8d;">
+                    L'application synchronise automatiquement les dates de vacances avec data.education.gouv.fr.
+                </p>
+            </div>
+        </section>
+
+    </main>
+
+    <nav class="bottom-nav">
+        <button class="nav-btn active" data-target="tab-accueil">🏠 Accueil</button>
+        <button class="nav-btn" data-target="tab-explorateur">🔭 Explorateur</button>
+        <button class="nav-btn" data-target="tab-profil">⚙️ Profil</button>
+    </nav>
+
+    <script src="script.js"></script>
+</body>
+</html>
