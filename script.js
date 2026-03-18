@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     
-    // --- 1. GESTION DES ONGLETS ---
+    // --- 1. GESTION DES ONGLETS & CALENDRIER ---
     const navButtons = document.querySelectorAll('.nav-btn');
     const tabContents = document.querySelectorAll('.tab-content');
 
@@ -13,7 +13,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Bascule Mois/Année du calendrier
     const btnMensuel = document.getElementById('btn-mensuel');
     const btnAnnuel = document.getElementById('btn-annuel');
     const vueMensuelle = document.getElementById('vue-mensuelle');
@@ -29,18 +28,28 @@ document.addEventListener('DOMContentLoaded', () => {
         vueAnnuelle.classList.add('active'); vueMensuelle.classList.remove('active');
     });
 
-    // --- 2. VARIABLES GLOBALES ---
+    // --- 2. LOGIQUE DES DATES (Sécurisée contre les fuseaux horaires) ---
+    function parseDate(str) {
+        const [y, m, d] = str.split('-');
+        return new Date(y, m - 1, d); // Heure locale minuit garanti
+    }
+    function formatDate(d) {
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
     let tousLesFeries = {};
     let listeDesPonts = [];
+    let listeVacances = [];
     const dateAujourdHui = new Date();
-    const currentYear = dateAujourdHui.getFullYear();
+    
+    let currentDisplayedYear = dateAujourdHui.getFullYear();
     let currentDisplayedMonth = dateAujourdHui.getMonth(); 
 
-    // --- 3. LE GÉNÉRATEUR DE CALENDRIER ---
+    // --- 3. GÉNÉRATION DU CALENDRIER ---
     const joursSemaine = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
     const nomsMois = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
-    function genererMoisHTML(year, month, isMini = false) {
+    function genererMoisHTML(year, month) {
         let html = `<div class="month-grid">`;
         joursSemaine.forEach(jour => { html += `<div class="day-header">${jour}</div>`; });
 
@@ -51,129 +60,132 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let i = 0; i < decalage; i++) { html += `<div class="day-cell empty"></div>`; }
 
         for (let jour = 1; jour <= joursDansLeMois; jour++) {
-            const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(jour).padStart(2, '0')}`;
+            const currentDateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(jour).padStart(2, '0')}`;
             let classes = 'day-cell';
             
-            if (tousLesFeries[dateString]) classes += ' ferie';
-            if (listeDesPonts.find(p => p.dateAPoser === dateString)) classes += ' pont';
+            // Vacances (Nouveau !)
+            const estEnVacances = listeVacances.some(v => currentDateString >= v.start && currentDateString <= v.end);
+            if (estEnVacances) classes += ' vacances';
+
+            // Fériés & Ponts
+            if (tousLesFeries[currentDateString]) classes += ' ferie';
+            if (listeDesPonts.find(p => p.dateAPoser === currentDateString)) classes += ' pont';
 
             html += `<div class="${classes}">${jour}</div>`;
         }
         return html + `</div>`;
     }
 
-    function afficherVueMensuelle() {
-        document.getElementById('current-month-title').innerText = `${nomsMois[currentDisplayedMonth]} ${currentYear}`;
-        document.getElementById('month-container').innerHTML = genererMoisHTML(currentYear, currentDisplayedMonth);
-    }
-
-    function afficherVueAnnuelle() {
-        const container = document.getElementById('year-container');
-        container.innerHTML = '';
+    function rafraichirCalendrier() {
+        document.getElementById('current-month-title').innerText = `${nomsMois[currentDisplayedMonth]} ${currentDisplayedYear}`;
+        document.getElementById('month-container').innerHTML = genererMoisHTML(currentDisplayedYear, currentDisplayedMonth);
+        
+        const yearContainer = document.getElementById('year-container');
+        yearContainer.innerHTML = '';
         for (let m = 0; m < 12; m++) {
-            const divMois = document.createElement('div');
-            divMois.className = 'mini-month';
-            divMois.innerHTML = `<h4>${nomsMois[m]}</h4>` + genererMoisHTML(currentYear, m, true);
-            container.appendChild(divMois);
+            const div = document.createElement('div');
+            div.className = 'mini-month';
+            div.innerHTML = `<h4>${nomsMois[m]}</h4>` + genererMoisHTML(currentDisplayedYear, m);
+            yearContainer.appendChild(div);
         }
     }
 
+    // Navigation (Corrigée pour passer à l'année suivante)
     document.getElementById('prev-month').addEventListener('click', () => {
-        if(currentDisplayedMonth > 0) { currentDisplayedMonth--; afficherVueMensuelle(); }
+        currentDisplayedMonth--;
+        if(currentDisplayedMonth < 0) { currentDisplayedMonth = 11; currentDisplayedYear--; }
+        rafraichirCalendrier();
     });
     document.getElementById('next-month').addEventListener('click', () => {
-        if(currentDisplayedMonth < 11) { currentDisplayedMonth++; afficherVueMensuelle(); }
+        currentDisplayedMonth++;
+        if(currentDisplayedMonth > 11) { currentDisplayedMonth = 0; currentDisplayedYear++; }
+        rafraichirCalendrier();
     });
 
-    // --- 4. AFFICHAGE DE LA LISTE (EXPLORATEUR) ET DU FILTRE ---
+    // --- 4. LISTE & FILTRES ---
     function afficherTimeline(pontsFiltres) {
         const timeline = document.getElementById('timeline');
         timeline.innerHTML = ''; 
-
         if (pontsFiltres.length === 0) {
-            timeline.innerHTML = `<p>Aucun pont trouvé pour ce nombre de jours. Soyez plus généreux ! 😉</p>`;
+            timeline.innerHTML = `<p>Aucun pont trouvé pour ce nombre de jours.</p>`;
             return;
         }
-
         pontsFiltres.forEach(pont => {
-            const dateFerieFormat = pont.dateFerie.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
-            const datePoserFormat = new Date(pont.dateAPoser).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
-            
+            const dateFerie = parseDate(pont.dateFerieStr);
+            const dateAPoser = parseDate(pont.dateAPoser);
             timeline.innerHTML += `
                 <div class="card">
                     <h3>${pont.nom}</h3>
-                    <p><strong>Férié le :</strong> ${dateFerieFormat}</p>
-                    <p>Posez le <strong>${datePoserFormat}</strong>.</p>
-                    <p class="highlight">💡 ${pont.joursAPoser} jour posé = 4 jours de week-end !</p>
-                </div>
-            `;
+                    <p><strong>Férié le :</strong> ${dateFerie.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' })}</p>
+                    <p>Posez le <strong>${dateAPoser.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' })}</strong>.</p>
+                    <p class="highlight">💡 1 jour posé = 4 jours de repos !</p>
+                </div>`;
         });
     }
 
-    // Activer le bouton de filtre !
-    const btnFiltrer = document.querySelector('.filter-bar .btn-secondary');
-    const inputJours = document.getElementById('jours-dispo');
-    
-    btnFiltrer.addEventListener('click', () => {
-        const maxJours = parseInt(inputJours.value, 10);
-        // On filtre la liste globale pour ne garder que ceux qui demandent moins ou autant de jours que souhaité
-        const resultats = listeDesPonts.filter(pont => pont.joursAPoser <= maxJours);
-        afficherTimeline(resultats);
+    document.querySelector('.filter-bar .btn-secondary').addEventListener('click', () => {
+        const maxJours = parseInt(document.getElementById('jours-dispo').value, 10);
+        afficherTimeline(listeDesPonts.filter(p => p.joursAPoser <= maxJours));
     });
 
+    // --- 5. CHARGEMENT DES DONNÉES ---
+    async function fetchVacances(zone) {
+        const url = `https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records?limit=100&where=population="Élèves"`;
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            listeVacances = data.results
+                .filter(r => r.zones === `Zone ${zone}`)
+                .map(r => ({ start: r.start_date.split('T')[0], end: r.end_date.split('T')[0] }));
+            rafraichirCalendrier(); // Met à jour le vert sur le calendrier
+        } catch (error) { console.error("Erreur Vacances :", error); }
+    }
 
-    // --- 5. RÉCUPÉRATION DES DONNÉES & ALGORITHME ---
     async function initData() {
-        const annees = [currentYear, currentYear + 1];
-
-        // 1. Récupérer les jours fériés sur 2 ans
+        const annees = [dateAujourdHui.getFullYear(), dateAujourdHui.getFullYear() + 1];
         for (let annee of annees) {
             try {
                 const response = await fetch(`https://calendrier.api.gouv.fr/jours-feries/metropole/${annee}.json`);
-                const data = await response.json();
-                Object.assign(tousLesFeries, data);
+                Object.assign(tousLesFeries, await response.json());
             } catch (error) { console.error("Erreur API :", error); }
         }
 
-        // 2. Calculer les ponts
         for (const [dateStr, nomFerie] of Object.entries(tousLesFeries)) {
-            const dateFerie = new Date(dateStr);
-            if (dateFerie < dateAujourdHui) continue; // On ignore le passé
+            const dateFerie = parseDate(dateStr);
+            if (dateFerie < dateAujourdHui) continue;
 
-            const jourDeLaSemaine = dateFerie.getDay(); 
-
-            if (jourDeLaSemaine === 2) { // Mardi
+            const jourSemaine = dateFerie.getDay(); 
+            if (jourSemaine === 2 || jourSemaine === 4) { // Mardi (2) ou Jeudi (4)
                 const dateAPoser = new Date(dateFerie);
-                dateAPoser.setDate(dateFerie.getDate() - 1);
+                dateAPoser.setDate(dateFerie.getDate() + (jourSemaine === 2 ? -1 : 1));
                 listeDesPonts.push({
                     nom: nomFerie,
-                    dateFerie: dateFerie,
-                    dateAPoser: dateAPoser.toISOString().split('T')[0],
-                    joursAPoser: 1 // Nouvelle donnée pour faire marcher le filtre
-                });
-            } else if (jourDeLaSemaine === 4) { // Jeudi
-                const dateAPoser = new Date(dateFerie);
-                dateAPoser.setDate(dateFerie.getDate() + 1);
-                listeDesPonts.push({
-                    nom: nomFerie,
-                    dateFerie: dateFerie,
-                    dateAPoser: dateAPoser.toISOString().split('T')[0],
-                    joursAPoser: 1 // Nouvelle donnée pour faire marcher le filtre
+                    dateFerieStr: dateStr,
+                    dateAPoser: formatDate(dateAPoser),
+                    joursAPoser: 1
                 });
             }
         }
 
-        // 3. Mise à jour de l'interface
-        afficherVueMensuelle();
-        afficherVueAnnuelle();
-        afficherTimeline(listeDesPonts); // On affiche tout par défaut
+        // Init Zone
+        const zoneSelect = document.getElementById('zone-select');
+        let userZone = localStorage.getItem('userZone') || 'A';
+        zoneSelect.value = userZone;
+        fetchVacances(userZone);
+
+        zoneSelect.addEventListener('change', (e) => {
+            localStorage.setItem('userZone', e.target.value);
+            fetchVacances(e.target.value);
+        });
+
+        rafraichirCalendrier();
+        afficherTimeline(listeDesPonts);
         
-        // Mettre à jour l'accueil
         if(listeDesPonts.length > 0) {
             const prochain = listeDesPonts[0];
             document.getElementById('next-pont').innerHTML = `
                 <h3>${prochain.nom}</h3>
-                <p>Posez le <strong>${new Date(prochain.dateAPoser).toLocaleDateString('fr-FR')}</strong>.</p>
+                <p>Posez le <strong>${parseDate(prochain.dateAPoser).toLocaleDateString('fr-FR')}</strong>.</p>
                 <p class="highlight">1 jour posé = 4 jours de repos</p>
             `;
         }
