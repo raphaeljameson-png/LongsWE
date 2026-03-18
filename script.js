@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnAnnuel.addEventListener('click', afficherVueAnnuelle);
 
     // Initialiser avec la vue mensuelle
-    afficherVueMensuelle();
+    // afficherVueMensuelle(); // <-- Cette ligne a été commentée/supprimée
 
     // ==================== 3. STATE MANAGEMENT ====================
     const state = {
@@ -265,6 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 let joursAPoserListe = [];
                 let nomsFeries = new Set();
 
+                // CORRECTION APPLIQUÉE ICI: Le curseur est correctement incrémenté.
                 for (let cursor = new Date(d); cursor <= dateFinFenetre; cursor = new Date(cursor.getTime() + 86400000)) {
                     const cursorStr = formatDate(cursor);
                     const isFerie = !!state.tousLesFeries[cursorStr];
@@ -432,6 +433,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             calculerPontsDynamiques();
+            afficherVueMensuelle(); // <-- Cette ligne a été ajoutée ici
         } catch (error) {
             console.error("Erreur initialisation:", error);
         }
