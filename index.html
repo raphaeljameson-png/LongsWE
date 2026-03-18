@@ -60,13 +60,21 @@
     <div class="tab-content" id="ponts-tab">
         <h2>Générateur de Ponts</h2>
         
-        <!-- Stepper Liquid Glass -->
+        <!-- Stepper Liquid Glass CORRIGÉ -->
         <div class="jours-dispo-container">
             <label class="jours-label">Jours max. à poser</label>
             <div class="stepper-container">
                 <button class="stepper-btn" id="btn-minus">−</button>
                 <div class="stepper-display">
-                    <div class="stepper-value" id="jours-dispo">1</div>
+                    <input 
+                        type="number" 
+                        id="jours-dispo" 
+                        class="stepper-value" 
+                        value="1" 
+                        min="1" 
+                        max="16"
+                        readonly
+                    >
                     <div class="stepper-subtitle">Jours</div>
                 </div>
                 <button class="stepper-btn" id="btn-plus">+</button>
