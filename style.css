@@ -298,7 +298,6 @@ h3 {
     color: var(--vacances-border);
 }
 
-/* ==================== PONT TAG ==================== */
 .pont-tag {
     display: inline-block;
     background: linear-gradient(135deg, #007AFF, #00C6FF);
@@ -309,7 +308,7 @@ h3 {
     font-size: 0.9rem;
 }
 
-/* ==================== STEPPER LIQUID GLASS (iOS Style) ==================== */
+/* ==================== STEPPER LIQUID GLASS (iOS Style AMÉLIORÉ) ==================== */
 
 .jours-dispo-container {
     display: flex;
