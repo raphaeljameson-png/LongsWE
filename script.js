@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
         vueAnnuelle.classList.add('active'); vueMensuelle.classList.remove('active');
     });
 
-    // ==================== 3. VARIABLES ET DATES ====================
+    // ==================== 3. STATE MANAGEMENT ====================
     const state = {
         tousLesFeries: {},
         listeDesPonts: [],
@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function genererCacheJours2Ans() {
         const cache = new Map();
         let dateInitiale = new Date(state.dateAujourdHui);
-        dateInitiale.setDate(dateInitiale.getDate() - 10); // Marge de sécurité
+        dateInitiale.setDate(dateInitiale.getDate() - 10); // Marge pour la veille
         let dateFin = new Date(dateInitiale.getFullYear() + 2, 11, 31);
 
         for (let d = new Date(dateInitiale); d <= dateFin; d.setDate(d.getDate() + 1)) {
@@ -73,52 +73,68 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const estJourOff = (dateObj) => state.jours2ans?.get(formatDate(dateObj)) ?? false;
 
-    // ==================== 5. GESTION DES 2 COMPTEURS (+ / -) ====================
+    // ==================== 5. SÉCURITÉ : THROTTLE POUR LES COMPTEURS ====================
     let throttleTimer = null;
     const throttledCalcul = () => {
         if (throttleTimer) return;
-        throttleTimer = setTimeout(() => { calculerPontsDynamiques(); throttleTimer = null; }, 100);
+        throttleTimer = setTimeout(() => {
+            try {
+                calculerPontsDynamiques();
+            } catch (error) {
+                console.error("Erreur de calcul des ponts:", error);
+            } finally {
+                throttleTimer = null; // GARANTIT que le bouton ne se bloque jamais
+            }
+        }, 150);
     };
 
-    // Compteur 1 : Jours à poser (Onglet Ponts)
+    // --- Compteur 1 : Jours à poser (Onglet Ponts) ---
     const inputJours = document.getElementById('jours-dispo');
     inputJours.value = state.DEFAULT_JOURS_POSER;
 
     document.getElementById('btn-plus').addEventListener('click', () => {
-        if (parseInt(inputJours.value) < 16) { inputJours.value = parseInt(inputJours.value) + 1; throttledCalcul(); }
+        if (parseInt(inputJours.value) < 16) { 
+            inputJours.value = parseInt(inputJours.value) + 1; 
+            throttledCalcul(); 
+        }
     });
     document.getElementById('btn-minus').addEventListener('click', () => {
-        if (parseInt(inputJours.value) > 1) { inputJours.value = parseInt(inputJours.value) - 1; throttledCalcul(); }
+        if (parseInt(inputJours.value) > 1) { 
+            inputJours.value = parseInt(inputJours.value) - 1; 
+            throttledCalcul(); 
+        }
     });
 
-    // Compteur 2 : Nombre d'objectifs (Onglet Accueil)
+    // --- Compteur 2 : Nombre d'objectifs (Onglet Accueil) ---
     const inputObj = document.getElementById('obj-dispo');
     inputObj.value = state.DEFAULT_NB_OBJECTIFS;
 
     document.getElementById('btn-obj-plus').addEventListener('click', () => {
-        if (parseInt(inputObj.value) < 20) { inputObj.value = parseInt(inputObj.value) + 1; mettreAJourAccueil(); }
+        if (parseInt(inputObj.value) < 20) { 
+            inputObj.value = parseInt(inputObj.value) + 1; 
+            mettreAJourAccueil(); // Ne demande pas de refaire les maths, juste l'affichage
+        }
     });
     document.getElementById('btn-obj-minus').addEventListener('click', () => {
-        if (parseInt(inputObj.value) > 1) { inputObj.value = parseInt(inputObj.value) - 1; mettreAJourAccueil(); }
+        if (parseInt(inputObj.value) > 1) { 
+            inputObj.value = parseInt(inputObj.value) - 1; 
+            mettreAJourAccueil(); 
+        }
     });
 
-    // ==================== 6. L'ALGORITHME DES PONTS (LE CERVEAU FIXÉ) ====================
+    // ==================== 6. LE CERVEAU INTELLIGENT (CORRIGÉ) ====================
     function calculerPontsDynamiques() {
-        const maxJoursAPoser = parseInt(inputJours.value, 10);
+        const maxJoursAPoser = parseInt(inputJours.value, 10) || 4;
         state.jours2ans = genererCacheJours2Ans();
         state.cacheCalendrier.clear(); 
 
         let dateInitiale = new Date(state.dateAujourdHui);
         let dateFin = new Date(dateInitiale.getFullYear() + 2, 11, 31);
-        let signatures = new Set();
-        state.listeDesPonts = [];
+        let bestPonts = {}; 
 
         for (let d = new Date(dateInitiale); d <= dateFin; d.setDate(d.getDate() + 1)) {
             
-            // RÈGLE 1 : Le bloc de vacances DOIT commencer par un jour chômé (Samedi, Dimanche ou Férié)
-            if (!estJourOff(d)) continue;
-
-            // RÈGLE 2 : Le jour d'avant doit être travaillé (pour garantir qu'on est au début du bloc)
+            // Une fenêtre de repos doit se glisser entre deux jours travaillés
             let hier = new Date(d); hier.setDate(hier.getDate() - 1);
             if (estJourOff(hier)) continue; 
 
@@ -126,10 +142,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 let dateFinFenetre = new Date(d);
                 dateFinFenetre.setDate(dateFinFenetre.getDate() + (longueur - 1));
 
-                // RÈGLE 3 : Le bloc DOIT se terminer par un jour chômé
-                if (!estJourOff(dateFinFenetre)) continue;
-
-                // RÈGLE 4 : Le jour d'après doit être travaillé (garantit qu'on a englobé tout le week-end)
                 let demain = new Date(dateFinFenetre); demain.setDate(demain.getDate() + 1);
                 if (estJourOff(demain)) continue;
 
@@ -138,41 +150,48 @@ document.addEventListener('DOMContentLoaded', () => {
                 let joursAPoserListe = [];
                 let nomsFeries = new Set();
 
-                // On scanne l'intérieur du bloc
                 for (let cursor = new Date(d); cursor <= dateFinFenetre; cursor.setDate(cursor.getDate() + 1)) {
                     const cursorStr = formatDate(cursor);
+                    
                     if (state.tousLesFeries[cursorStr]) {
                         contientFerie = true;
                         nomsFeries.add(state.tousLesFeries[cursorStr]);
                     }
-                    if (!state.jours2ans.get(cursorStr)) {
+                    if (!estJourOff(cursor)) {
                         nbJoursPoses++;
                         joursAPoserListe.push(cursorStr);
                     }
                 }
 
-                // Validation : Contient un férié et respecte le budget
                 if (contientFerie && nbJoursPoses > 0 && nbJoursPoses <= maxJoursAPoser) {
                     const nomCombinaison = Array.from(nomsFeries).join(' + ');
-                    // Signature unique pour éviter les doublons accidentels
-                    const signature = `${nomCombinaison}-${d.getTime()}-${dateFinFenetre.getTime()}`;
+                    const anneeDuPont = d.getFullYear();
                     
-                    if (!signatures.has(signature)) {
-                        signatures.add(signature);
-                        state.listeDesPonts.push({
-                            nom: nomCombinaison,
-                            debut: new Date(d),
-                            fin: new Date(dateFinFenetre),
-                            joursAPoserListe: joursAPoserListe,
-                            nbJoursPoses: nbJoursPoses,
-                            gain: longueur
-                        });
+                    // L'IDENTIFIANT UNIQUE : Différencie 2026 de 2027 pour ne plus écraser la liste !
+                    const identifiantUnique = `${nomCombinaison}_${anneeDuPont}`;
+                    
+                    const proposition = {
+                        nom: nomCombinaison,
+                        annee: anneeDuPont,
+                        debut: new Date(d),
+                        fin: new Date(dateFinFenetre),
+                        joursAPoserListe: joursAPoserListe,
+                        nbJoursPoses: nbJoursPoses,
+                        gain: longueur
+                    };
+
+                    if (!bestPonts[identifiantUnique]) {
+                        bestPonts[identifiantUnique] = proposition;
+                    } else if (proposition.gain > bestPonts[identifiantUnique].gain) {
+                        bestPonts[identifiantUnique] = proposition;
+                    } else if (proposition.gain === bestPonts[identifiantUnique].gain && proposition.nbJoursPoses < bestPonts[identifiantUnique].nbJoursPoses) {
+                        bestPonts[identifiantUnique] = proposition;
                     }
                 }
             }
         }
 
-        // On trie les ponts par ordre chronologique
+        state.listeDesPonts = Object.values(bestPonts);
         state.listeDesPonts.sort((a, b) => a.debut - b.debut);
 
         afficherTimelineDynamique();
@@ -183,15 +202,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==================== 7. AFFICHAGE (ONGLET PONTS) ====================
     function afficherTimelineDynamique() {
         const timeline = document.getElementById('timeline');
+        if (!timeline) return;
         timeline.innerHTML = '';
-        const maxJours = parseInt(inputJours.value, 10);
+        const maxJours = parseInt(inputJours.value, 10) || 4;
 
         if (state.listeDesPonts.length === 0) {
             timeline.innerHTML = `
-                <p class="text-muted" style="text-align:center; padding: 20px;">
-                    Aucune combinaison magique trouvée pour ${maxJours} jour(s).<br>
-                    Essayez d'augmenter votre budget !
-                </p>`;
+                <div style="animation: fadeIn 0.3s ease;">
+                    <p class="text-muted" style="text-align:center; padding: 20px;">
+                        Aucune combinaison trouvée pour ${maxJours} jour(s).<br>
+                        Essayez d'augmenter votre budget !
+                    </p>
+                </div>`;
             return;
         }
 
@@ -203,11 +225,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const debutStr = pont.debut.toLocaleDateString('fr-FR', OPT_DATES_WITH_YEAR);
             const finStr = pont.fin.toLocaleDateString('fr-FR', OPT_DATES_WITH_YEAR);
-            const annee = pont.debut.getFullYear();
 
+            // Ajout d'une animation "fadeIn" pour voir l'interface réagir au clic !
             timeline.innerHTML += `
-                <div class="card">
-                    <h3>Autour de : ${pont.nom} (${annee})</h3>
+                <div class="card" style="animation: fadeIn 0.4s ease;">
+                    <h3>Autour de : ${pont.nom} (${pont.annee})</h3>
                     <p class="text-muted" style="margin-bottom: 12px;">Période off : du ${debutStr} au ${finStr}</p>
                     <p style="font-size: 0.95rem;"><strong>Dates à poser (${pont.nbJoursPoses}) :</strong><br>${listeDatesPoser}</p>
                     <div style="margin-top: 15px;">
@@ -217,13 +239,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ==================== 8. AFFICHAGE (ONGLET ACCUEIL) ====================
+    // ==================== 8. AFFICHAGE DU TABLEAU DE BORD (ONGLET ACCUEIL) ====================
     function mettreAJourAccueil() {
         const homeContainer = document.getElementById('next-ponts-container');
         if (!homeContainer) return;
 
         homeContainer.innerHTML = '';
-        const nbObjectifs = parseInt(inputObj.value, 10);
+        const nbObjectifs = parseInt(inputObj.value, 10) || 5;
 
         if (state.listeDesPonts.length > 0) {
             const topPonts = state.listeDesPonts.slice(0, nbObjectifs);
@@ -235,8 +257,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const textStyle = isFirst ? 'color: rgba(255,255,255,0.9);' : 'color: var(--text-muted);';
 
                 homeContainer.innerHTML += `
-                    <div class="${cardClass}">
-                        <h3>${pont.nom} (${pont.debut.getFullYear()})</h3>
+                    <div class="${cardClass}" style="animation: fadeIn 0.4s ease;">
+                        <h3>${pont.nom} (${pont.annee})</h3>
                         <p style="${textStyle} margin-bottom: 12px;">
                             Du ${pont.debut.toLocaleDateString('fr-FR', OPT_DATES_WITH_YEAR)} 
                             au ${pont.fin.toLocaleDateString('fr-FR', OPT_DATES_WITH_YEAR)}
@@ -250,7 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             });
         } else {
-            homeContainer.innerHTML = `<div class="card"><h3 style="text-align:center;">Aucun pont en vue</h3></div>`;
+            homeContainer.innerHTML = `<div class="card" style="animation: fadeIn 0.3s ease;"><h3 style="text-align:center;">Aucun pont en vue</h3></div>`;
         }
     }
 
@@ -320,7 +342,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('prev-year').addEventListener('click', () => changerDate(-1, 0));
     document.getElementById('next-year').addEventListener('click', () => changerDate(1, 0));
 
-    // ==================== 10. FETCH API (VACANCES ET FÉRIÉS) ====================
+    // ==================== 10. API FETCH (VACANCES / FÉRIÉS) ====================
     async function fetchVacances(zone) {
         const url = `https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records?limit=100&where=population="Élèves"`;
         try {
@@ -334,7 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             state.cacheCalendrier.clear();
             rafraichirCalendrier();
-        } catch (error) { console.error("Erreur Vacances :", error); state.listeVacances = []; }
+        } catch (error) { console.error("Erreur API Vacances :", error); state.listeVacances = []; }
     }
 
     async function chargerFeriesDynamique(annee) {
@@ -348,7 +370,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) { console.error(`Erreur chargement fériés ${annee}:`, error); }
     }
 
-    // ==================== 11. INITIALISATION ====================
+    // ==================== 11. INITIALISATION DU PROJET ====================
     async function initData() {
         try {
             await chargerFeriesDynamique(state.dateAujourdHui.getFullYear());
@@ -366,9 +388,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             calculerPontsDynamiques();
-            afficherVueMensuelle();
+            afficherVueMensuelle(); 
         } catch (error) {
-            console.error("Erreur initialisation:", error);
+            console.error("Erreur critique d'initialisation:", error);
         }
     }
 
