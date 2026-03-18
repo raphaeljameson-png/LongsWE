@@ -38,9 +38,6 @@ document.addEventListener('DOMContentLoaded', () => {
     btnMensuel.addEventListener('click', afficherVueMensuelle);  
     btnAnnuel.addEventListener('click', afficherVueAnnuelle);  
 
-    // Initialiser avec la vue mensuelle  
-    // afficherVueMensuelle(); // <-- Cette ligne a été commentée/supprimée  
-
     // ==================== 3. STATE MANAGEMENT ====================  
     const state = {  
         tousLesFeries: {},  
@@ -76,18 +73,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const NOMS_MOIS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',   
                         'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];  
     
-    // Ancien format d'options sans année  
     const OPT_DATES = { weekday: 'short', day: 'numeric', month: 'short' };  
-    
-    // NOUVELLES OPTIONS DE FORMATAGE AVEC L'ANNÉE  
     const OPT_DATES_WITH_YEAR = { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' };  
 
     // ==================== 5. CACHE OPTIMISÉ DES JOURS WORK/OFF ====================  
     
-    /**  
-     * ⚡ PRÉ-GÉNÈRE UNE MAP: "YYYY-MM-DD" => estJourOff (boolean)  
-     * Accès O(1) au lieu de vérifier week-end + fériés à chaque fois  
-     */  
     function genererCacheJours2Ans() {  
         const cache = new Map();  
         let dateInitiale = new Date(state.dateAujourdHui);  
@@ -103,9 +93,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return cache;  
     }  
 
-    /**  
-     * Lookup O(1) pour savoir si une date est jour off  
-     */  
     const estJourOff = (dateObj) => {  
         const key = formatDate(dateObj);  
         return state.jours2ans?.get(key) ?? false;  
@@ -126,15 +113,15 @@ document.addEventListener('DOMContentLoaded', () => {
     };  
 
     document.getElementById('btn-plus').addEventListener('click', () => {  
-        if (inputJours.value < 16) {  
-            inputJours.value++;  
+        if (parseInt(inputJours.value) < 16) {  
+            inputJours.value = parseInt(inputJours.value) + 1;  
             throttledCalcul();  
         }  
     });  
 
     document.getElementById('btn-minus').addEventListener('click', () => {  
-        if (inputJours.value > 1) {  
-            inputJours.value--;  
+        if (parseInt(inputJours.value) > 1) {  
+            inputJours.value = parseInt(inputJours.value) - 1;  
             throttledCalcul();  
         }  
     });  
@@ -156,94 +143,4 @@ document.addEventListener('DOMContentLoaded', () => {
         const decalage = premierJour === 0 ? 6 : premierJour - 1;  
         const joursDansLeMois = new Date(year, month + 1, 0).getDate();  
 
-        for (let i = 0; i < decalage; i++) {   
-            html += `<div class="day-cell empty"></div>`;   
-        }  
-
-        for (let jour = 1; jour <= joursDansLeMois; jour++) {  
-            const currentDateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(jour).padStart(2, '0')}`;  
-            let classes = 'day-cell';  
-            
-            const estEnVacances = state.listeVacances.some(  
-                v => currentDateString >= v.start && currentDateString <= v.end  
-            );  
-            if (estEnVacances) classes += ' vacances';  
-
-            if (state.tousLesFeries[currentDateString]) classes += ' ferie';  
-            
-            if (state.listeDesPonts.some(p => p.joursAPoserListe.includes(currentDateString))) {  
-                classes += ' pont';  
-            }  
-
-            html += `<div class="${classes}">${jour}</div>`;  
-        }  
-
-        html += `</div>`;  
-        state.cacheCalendrier.set(cacheKey, html);  
-        return html;  
-    }  
-
-    function rafraichirCalendrier() {  
-        document.getElementById('current-month-title').innerText =   
-            `${NOMS_MOIS[state.currentDisplayedMonth]} ${state.currentDisplayedYear}`;  
-        document.getElementById('month-container').innerHTML =   
-            genererMoisHTML(state.currentDisplayedYear, state.currentDisplayedMonth);  
-        
-        document.getElementById('current-year-title').innerText = state.currentDisplayedYear;  
-        const yearContainer = document.getElementById('year-container');  
-        yearContainer.innerHTML = '';  
-        
-        for (let m = 0; m < 12; m++) {  
-            const div = document.createElement('div');  
-            div.className = 'mini-month';  
-            div.innerHTML = `<h4>${NOMS_MOIS[m]}</h4>` + genererMoisHTML(state.currentDisplayedYear, m);  
-            yearContainer.appendChild(div);  
-        }  
-    }  
-
-    async function changerDate(deltaAnnee, deltaMois = 0) {  
-        state.currentDisplayedYear += deltaAnnee;  
-        state.currentDisplayedMonth += deltaMois;  
-
-        if (state.currentDisplayedMonth < 0) {   
-            state.currentDisplayedMonth = 11;   
-            state.currentDisplayedYear--;   
-        }  
-        if (state.currentDisplayedMonth > 11) {   
-            state.currentDisplayedMonth = 0;   
-            state.currentDisplayedYear++;   
-        }  
-
-        if (!state.anneesChargees.has(state.currentDisplayedYear)) {  
-            await chargerFeriesDynamique(state.currentDisplayedYear);  
-        }  
-
-        for (let m = 0; m < 12; m++) {  
-            state.cacheCalendrier.delete(`${state.currentDisplayedYear}-${m}`);  
-        }  
-        
-        rafraichirCalendrier();  
-    }  
-
-    document.getElementById('prev-month').addEventListener('click', () => changerDate(0, -1));  
-    document.getElementById('next-month').addEventListener('click', () => changerDate(0, 1));  
-    document.getElementById('prev-year').addEventListener('click', () => changerDate(-1, 0));  
-    document.getElementById('next-year').addEventListener('click', () => changerDate(1, 0));  
-
-    // ==================== 8. ALGORITHME OPTIMISÉ ====================  
-    
-    /**  
-     * ⚡ ALGORITHME INTELLIGENT DE CALCUL DE PONTS  
-     */  
-    function calculerPontsDynamiques() {  
-        const maxJoursAPoser = parseInt(inputJours.value, 10);  
-        state.listeDesPonts = [];  
-        
-        state.jours2ans = genererCacheJours2Ans();  
-
-        let dateInitiale = new Date(state.dateAujourdHui);  
-        let dateFin = new Date(dateInitiale.getFullYear() + 2, 11, 31);  
-
-        let signatures = new Set();  
-
-        for (let d = new
+        for (let i = 0; i < decalage;
