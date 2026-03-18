@@ -331,10 +331,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const debutStr = pont.debut.toLocaleDateString('fr-FR', OPT_DATES_WITH_YEAR);
             // MODIFICATION ICI: Utilisation de OPT_DATES_WITH_YEAR
             const finStr = pont.fin.toLocaleDateString('fr-FR', OPT_DATES_WITH_YEAR);
+            
+            // ✅ NOUVEAU: Extraction de l'année du pont
+            const annee = pont.debut.getFullYear();
 
             timeline.innerHTML += `
                 <div class="card">
-                    <h3>Autour de : ${pont.nom}</h3>
+                    <h3>Autour de : ${pont.nom} (${annee})</h3>
                     <p class="text-muted" style="margin-bottom: 12px;">
                         Période off : du ${debutStr} au ${finStr}
                     </p>
