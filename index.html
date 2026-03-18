@@ -7,12 +7,10 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- ==================== HEADER ====================  -->
     <header>
         <h1>Mes Ponts d'Or 🏖️</h1>
     </header>
 
-    <!-- ==================== ONGLETS ====================  -->
     <div class="tab-content active" id="home-tab">
         <h2>Prochain Objectif</h2>
         <div class="highlight-card card" id="next-pont">
@@ -23,13 +21,11 @@
     <div class="tab-content" id="calendar-tab">
         <h2>Calendrier</h2>
         
-        <!-- Sélecteur Vue -->
         <div class="segmented-control">
             <button class="segment active" id="btn-mensuel">Mois</button>
             <button class="segment" id="btn-annuel">Année</button>
         </div>
 
-        <!-- Vue Mensuelle -->
         <div class="calendar-view active" id="vue-mensuelle">
             <div class="calendar-navigation">
                 <button id="prev-month">❮</button>
@@ -39,7 +35,6 @@
             <div id="month-container"></div>
         </div>
 
-        <!-- Vue Annuelle -->
         <div class="calendar-view" id="vue-annuelle">
             <div class="calendar-navigation">
                 <button id="prev-year">❮</button>
@@ -49,7 +44,6 @@
             <div id="year-container" class="year-grid"></div>
         </div>
 
-        <!-- Légende -->
         <div class="legend">
             <span class="badge badge-ferie">🔴 Férié</span>
             <span class="badge badge-pont">🔵 À poser</span>
@@ -60,38 +54,25 @@
     <div class="tab-content" id="ponts-tab">
         <h2>Générateur de Ponts</h2>
         
-        <!-- Stepper Liquid Glass CORRIGÉ -->
         <div class="jours-dispo-container">
             <label class="jours-label">Jours max. à poser</label>
             <div class="stepper-container">
                 <button class="stepper-btn" id="btn-minus">−</button>
                 <div class="stepper-display">
-                    <input 
-                        type="number" 
-                        id="jours-dispo" 
-                        class="stepper-value" 
-                        value="1" 
-                        min="1" 
-                        max="16"
-                        readonly
-                    >
+                    <input type="number" id="jours-dispo" class="stepper-value" value="1" min="1" max="16" readonly>
                     <div class="stepper-subtitle">Jours</div>
                 </div>
                 <button class="stepper-btn" id="btn-plus">+</button>
             </div>
         </div>
 
-        <!-- Timeline Ponts -->
         <div id="timeline">
-            <p class="text-muted" style="text-align:center; padding: 20px;">
-                ⏳ Recherche des meilleurs ponts en cours...
-            </p>
+            <p class="text-muted" style="text-align:center; padding: 20px;">⏳ Recherche des meilleurs ponts en cours...</p>
         </div>
     </div>
 
     <div class="tab-content" id="profile-tab">
         <h2>Mes Réglages</h2>
-        
         <div class="card">
             <h3>Ma Zone Scolaire</h3>
             <select id="zone-select" style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #E5E5EA; font-size: 0.95rem;">
@@ -99,30 +80,15 @@
                 <option value="B">Zone B (Lille, Marseille...)</option>
                 <option value="C">Zone C (Paris, Toulouse...)</option>
             </select>
-            <p class="text-muted" style="margin-top: 10px;">
-                Met à jour les couleurs du calendrier avec les dates officielles (data.education.gouv.fr).
-            </p>
+            <p class="text-muted" style="margin-top: 10px;">Met à jour les couleurs du calendrier avec les dates officielles (data.education.gouv.fr).</p>
         </div>
     </div>
 
-    <!-- ==================== BOTTOM NAV ====================  -->
     <div class="bottom-nav">
-        <button class="nav-btn active" data-target="home-tab">
-            <span class="icon">🏠</span>
-            <span class="label">Accueil</span>
-        </button>
-        <button class="nav-btn" data-target="calendar-tab">
-            <span class="icon">📅</span>
-            <span class="label">Calendrier</span>
-        </button>
-        <button class="nav-btn" data-target="ponts-tab">
-            <span class="icon">🚀</span>
-            <span class="label">Ponts</span>
-        </button>
-        <button class="nav-btn" data-target="profile-tab">
-            <span class="icon">⚙️</span>
-            <span class="label">Profil</span>
-        </button>
+        <button class="nav-btn active" data-target="home-tab"><span class="icon">🏠</span><span class="label">Accueil</span></button>
+        <button class="nav-btn" data-target="calendar-tab"><span class="icon">📅</span><span class="label">Calendrier</span></button>
+        <button class="nav-btn" data-target="ponts-tab"><span class="icon">🚀</span><span class="label">Ponts</span></button>
+        <button class="nav-btn" data-target="profile-tab"><span class="icon">⚙️</span><span class="label">Profil</span></button>
     </div>
 
     <script src="script.js"></script>
