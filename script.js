@@ -42,7 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
         currentDisplayedYear: null,
         currentDisplayedMonth: null,
         cacheCalendrier: new Map(),
-        jours2ans: null, // Cache O(1) des jours work/off
+        jours2ans: null,
+        DEFAULT_JOURS: 1,
     };
 
     state.dateAujourdHui.setHours(0, 0, 0, 0);
@@ -98,17 +99,19 @@ document.addEventListener('DOMContentLoaded', () => {
         return state.jours2ans?.get(key) ?? false;
     };
 
-    // ==================== 5. STEPPER THROTTLE ====================
-    // Évite de recalculer à chaque clic rapide
+    // ==================== 5. STEPPER AVEC THROTTLE & INITIALISATION ====================
     const inputJours = document.getElementById('jours-dispo');
     let throttleTimer = null;
+
+    // 🎯 INITIALISER AVEC LA VALEUR PAR DÉFAUT
+    inputJours.value = state.DEFAULT_JOURS;
 
     const throttledCalcul = () => {
         if (throttleTimer) return;
         throttleTimer = setTimeout(() => {
             calculerPontsDynamiques();
             throttleTimer = null;
-        }, 150); // Délai court mais efficace
+        }, 150); // Délai court pour éviter les recalculs à chaque clic rapide
     };
 
     document.getElementById('btn-plus').addEventListener('click', () => {
@@ -228,10 +231,9 @@ document.addEventListener('DOMContentLoaded', () => {
      * Optimisations:
      * 1. Cache des jours work/off (O(1) lookup au lieu de O(n))
      * 2. Break précoce si hier/demain = off
-     * 3. Dictionnaire bestPonts qui retient SEULEMENT la meilleure option par férié
-     *    - Meilleur gain d'abord
-     *    - Si même gain, celle qui coûte le moins en congés
-     * 4. Pas de recalcul inutile avec throttle
+     * 3. Pas de recalcul inutile avec throttle (150ms)
+     * 4. Valeur par défaut: 1 jour, max: 16 jours
+     * 5. Pas de mutation directe des dates
      */
     function calculerPontsDynamiques() {
         const maxJoursAPoser = parseInt(inputJours.value, 10);
@@ -243,23 +245,21 @@ document.addEventListener('DOMContentLoaded', () => {
         let dateInitiale = new Date(state.dateAujourdHui);
         let dateFin = new Date(dateInitiale.getFullYear() + 2, 11, 31);
 
-        // Dictionnaire intelligent: garde seulement la MEILLEURE option par férié
-        let bestPonts = {};
+        let signatures = new Set();
 
-        // Itérer sur chaque jour potentiel de début de pont
         for (let d = new Date(dateInitiale); d <= dateFin; d.setDate(d.getDate() + 1)) {
             
-            // 🎯 Règle 1: Hier doit être un jour de TRAVAIL
+            // Règle 1: Hier doit être un jour de TRAVAIL
             let hier = new Date(d);
             hier.setDate(hier.getDate() - 1);
             if (estJourOff(hier)) continue; 
 
-            // 🎯 Règle 2: Tester longueurs 3-16 jours
+            // Règle 2: Tester longueurs 3-16 jours
             for (let longueur = 3; longueur <= 16; longueur++) {
                 let dateFinFenetre = new Date(d);
                 dateFinFenetre.setDate(dateFinFenetre.getDate() + (longueur - 1));
 
-                // 🎯 Règle 3: Demain doit être un jour de TRAVAIL
+                // Règle 3: Demain doit être un jour de TRAVAIL
                 let demain = new Date(dateFinFenetre);
                 demain.setDate(demain.getDate() + 1);
                 if (estJourOff(demain)) continue;
@@ -270,7 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 let joursAPoserListe = [];
                 let nomsFeries = new Set();
 
-                // ⚠️ NE PLUS muter le curseur directement - utiliser une copie propre
+                // ⚠️ NE PAS muter le curseur directement - créer une nouvelle instance
                 for (let cursor = new Date(d); cursor <= dateFinFenetre; cursor = new Date(cursor.getTime() + 86400000)) {
                     const cursorStr = formatDate(cursor);
                     const isFerie = !!state.tousLesFeries[cursorStr];
@@ -288,39 +288,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Validation: contient une ferie + respecte budget
                 if (contientFerie && nbJoursPoses > 0 && nbJoursPoses <= maxJoursAPoser) {
-                    const nomCombinaison = Array.from(nomsFeries).join(' + ');
-                    
-                    const proposition = {
-                        nom: nomCombinaison,
-                        debut: new Date(d),
-                        fin: new Date(dateFinFenetre),
-                        joursAPoserListe: joursAPoserListe,
-                        nbJoursPoses: nbJoursPoses,
-                        gain: longueur
-                    };
-
-                    // 🌟 LA MAGIE: Garder SEULEMENT la meilleure option par férié
-                    if (!bestPonts[nomCombinaison]) {
-                        // Première fois qu'on voit ce férié
-                        bestPonts[nomCombinaison] = proposition;
-                    } else {
-                        // On a déjà trouvé une combinaison pour ce férié
-                        // Garder celle avec le meilleur gain
-                        if (proposition.gain > bestPonts[nomCombinaison].gain) {
-                            bestPonts[nomCombinaison] = proposition;
-                        } 
-                        // Si le gain est identique, garder celle qui coûte le moins
-                        else if (proposition.gain === bestPonts[nomCombinaison].gain && 
-                                 proposition.nbJoursPoses < bestPonts[nomCombinaison].nbJoursPoses) {
-                            bestPonts[nomCombinaison] = proposition;
-                        }
+                    const signature = d.getTime() + '-' + dateFinFenetre.getTime();
+                    if (!signatures.has(signature)) {
+                        signatures.add(signature);
+                        
+                        state.listeDesPonts.push({
+                            nom: Array.from(nomsFeries).join(' + '),
+                            debut: new Date(d),
+                            fin: new Date(dateFinFenetre),
+                            joursAPoserListe: joursAPoserListe,
+                            nbJoursPoses: nbJoursPoses,
+                            gain: longueur
+                        });
                     }
                 }
             }
         }
 
-        // Convertir le dictionnaire en liste et trier chronologiquement
-        state.listeDesPonts = Object.values(bestPonts);
         state.listeDesPonts.sort((a, b) => a.debut - b.debut);
 
         afficherTimelineDynamique();
@@ -406,7 +390,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     end: r.end_date.split('T')[0] 
                 }));
 
-            // Invalider le cache
             state.cacheCalendrier.clear();
             rafraichirCalendrier();
         } catch (error) {
@@ -428,7 +411,6 @@ document.addEventListener('DOMContentLoaded', () => {
             Object.assign(state.tousLesFeries, data);
             state.anneesChargees.add(annee);
 
-            // Invalider le cache de jours2ans et calendrier
             state.jours2ans = null;
             state.cacheCalendrier.clear();
         } catch (error) {
@@ -439,11 +421,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==================== 10. INITIALISATION ====================
     async function initData() {
         try {
-            // Charger les fériés pour 2 ans
             await chargerFeriesDynamique(state.dateAujourdHui.getFullYear());
             await chargerFeriesDynamique(state.dateAujourdHui.getFullYear() + 1);
 
-            // Charger zone scolaire
             const zoneSelect = document.getElementById('zone-select');
             let userZone = localStorage.getItem('userZone') || 'A';
             zoneSelect.value = userZone;
@@ -455,7 +435,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 await fetchVacances(e.target.value);
             });
 
-            // Lancer le premier calcul
             calculerPontsDynamiques();
         } catch (error) {
             console.error("Erreur initialisation:", error);
