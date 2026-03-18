@@ -17,18 +17,33 @@
         <section id="tab-accueil" class="tab-content active">
             <h2>Prochain Objectif</h2>
             <div class="card" id="next-pont">
-                <h3>Le Radar est en cours d'activation...</h3>
-                <p>Calcul du prochain pont imminent.</p>
+                <h3>Calcul en cours...</h3>
+            </div>
+        </section>
+
+        <section id="tab-calendrier" class="tab-content">
+            <h2>Calendrier 2026</h2>
+            <div class="calendar-toggle">
+                <button id="btn-mensuel" class="btn-toggle active">Mois</button>
+                <button id="btn-annuel" class="btn-toggle">Année</button>
+            </div>
+            
+            <div id="vue-mensuelle" class="calendar-view active">
+                <div class="month-navigation">
+                    <button id="prev-month">◀</button>
+                    <h3 id="current-month-title">Mai 2026</h3>
+                    <button id="next-month">▶</button>
+                </div>
+                <div id="month-container"></div>
+            </div>
+
+            <div id="vue-annuelle" class="calendar-view">
+                <div id="year-container" class="year-grid"></div>
             </div>
         </section>
 
         <section id="tab-explorateur" class="tab-content">
-            <h2>Vue à 2 ans</h2>
-            <div class="filter-bar">
-                <p>Jours à poser : <input type="number" id="jours-dispo" value="1" min="1" max="10"></p>
-                <button class="btn-secondary">Filtrer</button>
-            </div>
-            
+            <h2>Liste des Ponts</h2>
             <div id="timeline">
                 <p class="loading-text">⏳ Recherche des meilleurs ponts en cours...</p>
             </div>
@@ -39,13 +54,10 @@
             <div class="settings-group">
                 <label for="zone-select">Ma Zone Scolaire :</label>
                 <select id="zone-select">
-                    <option value="A">Zone A (Lyon, Bordeaux, Besançon...)</option>
-                    <option value="B">Zone B (Lille, Marseille, Nantes...)</option>
-                    <option value="C">Zone C (Paris, Toulouse, Montpellier...)</option>
+                    <option value="A">Zone A</option>
+                    <option value="B">Zone B</option>
+                    <option value="C">Zone C</option>
                 </select>
-                <p style="margin-top: 15px; font-size: 0.9em; color: #7f8c8d;">
-                    L'application synchronise automatiquement les dates de vacances avec data.education.gouv.fr.
-                </p>
             </div>
         </section>
 
@@ -53,7 +65,8 @@
 
     <nav class="bottom-nav">
         <button class="nav-btn active" data-target="tab-accueil">🏠 Accueil</button>
-        <button class="nav-btn" data-target="tab-explorateur">🔭 Explorateur</button>
+        <button class="nav-btn" data-target="tab-calendrier">📅 Calendrier</button>
+        <button class="nav-btn" data-target="tab-explorateur">🔭 Liste</button>
         <button class="nav-btn" data-target="tab-profil">⚙️ Profil</button>
     </nav>
 
